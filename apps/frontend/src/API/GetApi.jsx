@@ -50,11 +50,29 @@ export const postData = async (endpoint, data, environment = "sandbox") => {
     }
     return res;
   } catch (error) {
-    console.error("API Error:", {
+    console.error("FBR API Error:", {
       message: error.message,
       status: error.response?.status,
+      statusText: error.response?.statusText,
       data: error.response?.data, // Log full error response
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        timeout: error.config?.timeout,
+      },
     });
+
+    // Enhanced error logging for debugging
+    if (error.response?.data) {
+      console.error("FBR Error Response Details:", {
+        validationResponse: error.response.data.validationResponse,
+        invoiceStatuses: error.response.data.invoiceStatuses,
+        error: error.response.data.error,
+        message: error.response.data.message,
+        statusCode: error.response.data.statusCode,
+      });
+    }
+
     if (error.response?.status === 401) {
       Swal.fire({
         icon: "error",

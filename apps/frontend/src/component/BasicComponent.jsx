@@ -654,27 +654,29 @@ export default function BasicTable() {
                               gap: 1,
                             }}
                           >
-                            <Tooltip title="Print Invoice">
-                              <Button
-                                variant="outlined"
-                                color="success"
-                                size="small"
-                                onClick={() => handleButtonClick(row)}
-                                sx={{
-                                  minWidth: "32px",
-                                  width: "32px",
-                                  height: "32px",
-                                  p: 0,
-                                  "&:hover": {
-                                    backgroundColor: "success.main",
-                                    color: "success.contrastText",
-                                    borderColor: "success.main",
-                                  },
-                                }}
-                              >
-                                <PrintIcon fontSize="small" />
-                              </Button>
-                            </Tooltip>
+                            {!row.invoiceNumber?.startsWith("SAVED_") && (
+                              <Tooltip title="Print Invoice">
+                                <Button
+                                  variant="outlined"
+                                  color="success"
+                                  size="small"
+                                  onClick={() => handleButtonClick(row)}
+                                  sx={{
+                                    minWidth: "32px",
+                                    width: "32px",
+                                    height: "32px",
+                                    p: 0,
+                                    "&:hover": {
+                                      backgroundColor: "success.main",
+                                      color: "success.contrastText",
+                                      borderColor: "success.main",
+                                    },
+                                  }}
+                                >
+                                  <PrintIcon fontSize="small" />
+                                </Button>
+                              </Tooltip>
+                            )}
                             <Tooltip title="View Invoice Details">
                               <Button
                                 variant="outlined"

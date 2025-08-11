@@ -193,3 +193,17 @@
   padding: 8px 14px;
   font-size: 14px;
 }
+
+/* SweetAlert popup styling for better error display */
+.swal-wide {
+  width: 600px !important;
+  max-width: 90vw !important;
+}
+
+.swal-wide .swal2-content {
+  text-align: left !important;
+  white-space: pre-line !important;
+  font-family: monospace !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+}

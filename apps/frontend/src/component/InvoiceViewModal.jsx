@@ -190,13 +190,15 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             Sales Tax Invoice
           </Typography>
           <Box>
-            <IconButton
-              onClick={onPrint}
-              sx={{ color: "primary.contrastText", mr: 1 }}
-              title="Print Invoice"
-            >
-              <PrintIcon />
-            </IconButton>
+            {!invoice?.invoiceNumber?.startsWith("SAVED_") && (
+              <IconButton
+                onClick={onPrint}
+                sx={{ color: "primary.contrastText", mr: 1 }}
+                title="Print Invoice"
+              >
+                <PrintIcon />
+              </IconButton>
+            )}
             <IconButton
               onClick={onClose}
               sx={{ color: "primary.contrastText" }}

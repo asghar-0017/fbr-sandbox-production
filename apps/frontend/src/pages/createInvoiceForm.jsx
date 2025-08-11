@@ -806,7 +806,7 @@ export default function CreateInvoice() {
               // Handle percentage rates
               const rate = parseFloat((item.rate || "0").replace("%", "")) || 0;
               const rateFraction = rate / 100;
-              salesTax = Number((retailPrice * rateFraction).toFixed(2));
+              salesTax = retailPrice * rateFraction;
             }
 
             item.salesTaxApplicable = salesTax.toString();
@@ -841,7 +841,7 @@ export default function CreateInvoice() {
               const rate = parseFloat((item.rate || "0").replace("%", "")) || 0;
               const rateFraction = rate / 100;
               const valueSales = parseFloat(item.valueSalesExcludingST || 0);
-              salesTax = Number((valueSales * rateFraction).toFixed(2));
+              salesTax = valueSales * rateFraction;
             }
 
             item.salesTaxApplicable = salesTax.toString();
@@ -1033,6 +1033,42 @@ export default function CreateInvoice() {
       return;
     }
 
+    // Check if there are added items and show warning
+    if (addedItems.length > 0) {
+      Swal.fire({
+        title: "Warning",
+        text: "Changing the transaction type will reset your list of added items. Are you sure you want to continue?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, change it!",
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // User confirmed - proceed with transaction type change and clear added items
+          proceedWithTransactionTypeChange(transctypeId);
+          // Clear added items
+          setAddedItems([]);
+          Swal.fire({
+            title: "Items Cleared",
+            text: "Your added items have been cleared due to transaction type change.",
+            icon: "info",
+            confirmButtonColor: "#2A69B0",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        }
+        // If user cancels, do nothing - the transaction type remains unchanged
+      });
+      return;
+    }
+
+    // If no added items, proceed normally
+    proceedWithTransactionTypeChange(transctypeId);
+  };
+
+  const proceedWithTransactionTypeChange = (transctypeId) => {
     // Find the selected transaction type from the API data
     const selectedTransactionType = transactionTypes.find(
       (item) => item.transactioN_TYPE_ID === transctypeId
@@ -1177,6 +1213,37 @@ export default function CreateInvoice() {
       // Use addedItems for saving if available, otherwise use formData.items
       const itemsToSave = addedItems.length > 0 ? addedItems : formData.items;
 
+      // Validate all items before proceeding (for draft save, we can be more lenient)
+      const validationErrors = [];
+      itemsToSave.forEach((item, index) => {
+        const itemErrors = validateItem(item, index + 1);
+        if (itemErrors.length > 0) {
+          validationErrors.push({
+            itemNumber: index + 1,
+            errors: itemErrors,
+          });
+        }
+      });
+
+      // If there are validation errors, show them and stop
+      if (validationErrors.length > 0) {
+        const errorMessages = validationErrors
+          .map(
+            (error) =>
+              `Item ${error.itemNumber} validation failed: ${error.errors.join(", ")}`
+          )
+          .join("\n");
+
+        Swal.fire({
+          icon: "error",
+          title: "Item Validation Failed",
+          text: errorMessages,
+          confirmButtonColor: "#d33",
+        });
+        setSaveLoading(false);
+        return;
+      }
+
       const cleanedData = {
         ...formData,
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
@@ -1215,9 +1282,8 @@ export default function CreateInvoice() {
               valueSalesExcludingST: Number(
                 Number(rest.valueSalesExcludingST || 0).toFixed(2)
               ),
-              salesTaxApplicable: Number(
-                Number(rest.salesTaxApplicable).toFixed(2)
-              ),
+              salesTaxApplicable:
+                Math.round(Number(rest.salesTaxApplicable) * 100) / 100,
               salesTaxWithheldAtSource: Number(
                 Number(rest.salesTaxWithheldAtSource || 0).toFixed(2)
               ),
@@ -1278,6 +1344,79 @@ export default function CreateInvoice() {
     }
   };
 
+  // Function to validate individual items
+  const validateItem = (item, itemNumber) => {
+    const errors = [];
+
+    // Required field validations
+    if (!item.hsCode || item.hsCode.trim() === "") {
+      errors.push("HS Code is required");
+    }
+
+    if (!item.productDescription || item.productDescription.trim() === "") {
+      errors.push("Product Description is required");
+    }
+
+    if (!item.rate || item.rate.trim() === "") {
+      errors.push("Rate is required");
+    }
+
+    if (!item.uoM || item.uoM.trim() === "") {
+      errors.push("Unit of Measurement is required");
+    }
+
+    if (
+      !item.quantity ||
+      item.quantity === "" ||
+      parseFloat(item.quantity) <= 0
+    ) {
+      errors.push("Quantity must be greater than 0");
+    }
+
+    if (
+      !item.unitPrice ||
+      item.unitPrice === "" ||
+      parseFloat(item.unitPrice) < 0
+    ) {
+      errors.push("Unit Price cannot be negative");
+    }
+
+    if (
+      !item.totalValues ||
+      item.totalValues === "" ||
+      parseFloat(item.totalValues) <= 0
+    ) {
+      errors.push("Total Value must be greater than 0");
+    }
+
+    // Numeric validations
+    if (item.quantity && isNaN(parseFloat(item.quantity))) {
+      errors.push("Quantity must be a valid number");
+    }
+
+    if (item.unitPrice && isNaN(parseFloat(item.unitPrice))) {
+      errors.push("Unit Price must be a valid number");
+    }
+
+    if (item.totalValues && isNaN(parseFloat(item.totalValues))) {
+      errors.push("Total Value must be a valid number");
+    }
+
+    if (item.salesTaxApplicable && isNaN(parseFloat(item.salesTaxApplicable))) {
+      errors.push("Sales Tax must be a valid number");
+    }
+
+    if (item.furtherTax && isNaN(parseFloat(item.furtherTax))) {
+      errors.push("Further Tax must be a valid number");
+    }
+
+    if (item.fedPayable && isNaN(parseFloat(item.fedPayable))) {
+      errors.push("FED Payable must be a valid number");
+    }
+
+    return errors;
+  };
+
   const handleSaveAndValidate = async () => {
     setSaveValidateLoading(true);
     try {
@@ -1317,6 +1456,37 @@ export default function CreateInvoice() {
       // Use addedItems for saving if available, otherwise use formData.items
       const itemsToSave = addedItems.length > 0 ? addedItems : formData.items;
 
+      // Validate all items before proceeding
+      const validationErrors = [];
+      itemsToSave.forEach((item, index) => {
+        const itemErrors = validateItem(item, index + 1);
+        if (itemErrors.length > 0) {
+          validationErrors.push({
+            itemNumber: index + 1,
+            errors: itemErrors,
+          });
+        }
+      });
+
+      // If there are validation errors, show them and stop
+      if (validationErrors.length > 0) {
+        const errorMessages = validationErrors
+          .map(
+            (error) =>
+              `Item ${error.itemNumber} validation failed: ${error.errors.join(", ")}`
+          )
+          .join("\n");
+
+        Swal.fire({
+          icon: "error",
+          title: "Item Validation Failed",
+          text: errorMessages,
+          confirmButtonColor: "#d33",
+        });
+        setSaveValidateLoading(false);
+        return;
+      }
+
       const cleanedData = {
         ...formData,
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
@@ -1355,9 +1525,8 @@ export default function CreateInvoice() {
               valueSalesExcludingST: Number(
                 Number(rest.valueSalesExcludingST || 0).toFixed(2)
               ),
-              salesTaxApplicable: Number(
-                Number(rest.salesTaxApplicable).toFixed(2)
-              ),
+              salesTaxApplicable:
+                Math.round(Number(rest.salesTaxApplicable) * 100) / 100,
               salesTaxWithheldAtSource: Number(
                 Number(rest.salesTaxWithheldAtSource || 0).toFixed(2)
               ),
@@ -1431,50 +1600,132 @@ export default function CreateInvoice() {
           setIsSubmitVisible(true);
         }
       } else {
-        // If validation fails, show FBR validation error
+        // If validation fails, show detailed FBR validation error
+        let errorMessage = "Invoice validation with FBR failed.";
+        let errorDetails = [];
+
         // Handle different error response structures
-        const errorMessage = hasValidationResponse
-          ? validateRes.data.validationResponse.error
-          : validateRes.data.error ||
-            validateRes.data.message ||
-            "Invoice validation with FBR failed.";
+        if (hasValidationResponse) {
+          const validation = validateRes.data.validationResponse;
+          if (validation.error) {
+            errorMessage = validation.error;
+          }
+          // Check for item-specific errors
+          if (
+            validation.invoiceStatuses &&
+            Array.isArray(validation.invoiceStatuses)
+          ) {
+            validation.invoiceStatuses.forEach((status, index) => {
+              if (status.error) {
+                errorDetails.push(`Item ${index + 1}: ${status.error}`);
+              }
+            });
+          }
+        } else if (validateRes.data.error) {
+          errorMessage = validateRes.data.error;
+        } else if (validateRes.data.message) {
+          errorMessage = validateRes.data.message;
+        }
+
+        // Check for additional error details in the response
+        if (
+          validateRes.data.invoiceStatuses &&
+          Array.isArray(validateRes.data.invoiceStatuses)
+        ) {
+          validateRes.data.invoiceStatuses.forEach((status, index) => {
+            if (status.error) {
+              errorDetails.push(`Item ${index + 1}: ${status.error}`);
+            }
+          });
+        }
+
+        // Combine error message with details
+        const fullErrorMessage =
+          errorDetails.length > 0
+            ? `${errorMessage}\n\nDetails:\n${errorDetails.join("\n")}`
+            : errorMessage;
 
         Swal.fire({
           icon: "error",
           title: "FBR Validation Failed",
-          text: errorMessage,
+          text: fullErrorMessage,
           confirmButtonColor: "#d33",
+          width: "600px",
+          customClass: {
+            popup: "swal-wide",
+          },
         });
       }
     } catch (error) {
       console.error("Save and Validate Error:", error);
 
+      // Enhanced error handling for different types of errors
+      let errorTitle = "Error";
+      let errorMessage = "Failed to save and validate invoice";
+      let errorDetails = [];
+
       // Check if it's a validation error from FBR
       const errorResponse = error.response?.data;
-      const fbrError =
-        errorResponse?.validationResponse?.error ||
-        errorResponse?.error ||
-        errorResponse?.message;
 
-      if (fbrError) {
-        Swal.fire({
-          icon: "error",
-          title: "FBR Validation Error",
-          text: fbrError,
-          confirmButtonColor: "#d33",
-        });
+      if (errorResponse) {
+        // Handle FBR API validation errors
+        const fbrError =
+          errorResponse?.validationResponse?.error ||
+          errorResponse?.error ||
+          errorResponse?.message;
+
+        if (fbrError) {
+          errorTitle = "FBR Validation Error";
+          errorMessage = fbrError;
+
+          // Check for item-specific errors in validation response
+          if (errorResponse.validationResponse?.invoiceStatuses) {
+            errorResponse.validationResponse.invoiceStatuses.forEach(
+              (status, index) => {
+                if (status.error) {
+                  errorDetails.push(`Item ${index + 1}: ${status.error}`);
+                }
+              }
+            );
+          }
+        } else {
+          // Handle other API response errors
+          if (errorResponse.errors && Array.isArray(errorResponse.errors)) {
+            errorDetails = errorResponse.errors;
+          } else if (errorResponse.message) {
+            errorMessage = errorResponse.message;
+          }
+        }
       } else {
-        const errorMessage = error.response?.data?.errors
-          ? error.response.data.errors.join(", ")
-          : error.response?.data?.message || error.message;
-
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: `Failed to save and validate invoice: ${errorMessage}`,
-          confirmButtonColor: "#d33",
-        });
+        // Handle network and other errors
+        if (error.code === "ECONNABORTED") {
+          errorTitle = "Request Timeout";
+          errorMessage = "FBR API request timed out. Please try again.";
+        } else if (error.code === "ERR_NETWORK") {
+          errorTitle = "Network Error";
+          errorMessage =
+            "Unable to connect to FBR API. Please check your internet connection.";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
       }
+
+      // Combine error message with details
+      const fullErrorMessage =
+        errorDetails.length > 0
+          ? `${errorMessage}\n\nDetails:\n${errorDetails.join("\n")}`
+          : errorMessage;
+
+      Swal.fire({
+        icon: "error",
+        title: errorTitle,
+        text: fullErrorMessage,
+        confirmButtonColor: "#d33",
+        width: "600px",
+        customClass: {
+          popup: "swal-wide",
+        },
+      });
     } finally {
       setSaveValidateLoading(false);
     }
@@ -1666,9 +1917,8 @@ export default function CreateInvoice() {
             valueSalesExcludingST: Number(
               Number(rest.valueSalesExcludingST || 0).toFixed(2)
             ),
-            salesTaxApplicable: Number(
-              Number(rest.salesTaxApplicable).toFixed(2)
-            ),
+            salesTaxApplicable:
+              Math.round(Number(rest.salesTaxApplicable) * 100) / 100,
             salesTaxWithheldAtSource: Number(
               Number(rest.salesTaxWithheldAtSource || 0).toFixed(2)
             ),
@@ -2807,7 +3057,8 @@ export default function CreateInvoice() {
                   flexWrap: "wrap",
                   gap: 1.5,
                   mt: 1,
-                  justifyContent: "flex-start",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
                 <Box sx={{ flex: "0 1 18%", minWidth: "150px" }}>
@@ -2818,6 +3069,18 @@ export default function CreateInvoice() {
                       : ""}
                   </Typography>
                 </Box>
+                <Tooltip title={editingItemIndex ? "Update Item" : "Add Item"}>
+                  <IconButton
+                    aria-label={editingItemIndex ? "update item" : "add item"}
+                    onClick={addNewItem}
+                    sx={{
+                      color: editingItemIndex ? "#f57c00" : "#2A69B0",
+                      transition: "color 0.2s ease",
+                    }}
+                  >
+                    <IoIosAddCircle size={35} />
+                  </IconButton>
+                </Tooltip>
               </Box>
 
               {/* <Box sx={{ position: "relative", mt: 0.5, textAlign: "left" }}>
@@ -2837,6 +3100,41 @@ export default function CreateInvoice() {
             </Box>
           ))}
         </Box>
+
+        {/* Helper message when no items are added */}
+        {addedItems.length === 0 && (
+          <Box
+            sx={{
+              border: "2px dashed rgba(99, 102, 241, 0.3)",
+              borderRadius: 2,
+              p: 3,
+              mb: 2,
+              background: "rgba(248, 250, 252, 0.7)",
+              textAlign: "center",
+            }}
+          >
+            <Typography
+              variant="body1"
+              sx={{
+                color: "rgba(99, 102, 241, 0.7)",
+                fontWeight: 500,
+                mb: 1,
+              }}
+            >
+              📋 No items added yet
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "rgba(99, 102, 241, 0.6)",
+                fontSize: "0.875rem",
+              }}
+            >
+              Fill in the item details above and click the + button to add
+              items. Save and Validate buttons will appear once you add items.
+            </Typography>
+          </Box>
+        )}
 
         {/* Added Items Table */}
         {addedItems.length > 0 && (
@@ -2986,7 +3284,7 @@ export default function CreateInvoice() {
           className="button-group"
           sx={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
             alignItems: "center",
             mt: 0.5,
             mb: 0,
@@ -2995,75 +3293,68 @@ export default function CreateInvoice() {
             height: "auto",
           }}
         >
-          <Tooltip title={editingItemIndex ? "Update Item" : "Add Item"}>
-            <IconButton
-              aria-label={editingItemIndex ? "update item" : "add item"}
-              onClick={addNewItem}
-              sx={{
-                color: editingItemIndex ? "#f57c00" : "#2A69B0",
-                transition: "color 0.2s ease",
-              }}
-            >
-              <IoIosAddCircle size={35} />
-            </IconButton>
-          </Tooltip>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Button
-              onClick={handleSave}
-              variant="outlined"
-              color="info"
-              size="small"
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                px: 2,
-                py: 0.5,
-                fontSize: 12,
-                letterSpacing: 0.5,
-                boxShadow: 1,
-                transition: "all 0.2s",
-                "&:hover": {
-                  background: "#0288d1",
-                  color: "white",
-                  boxShadow: 2,
-                },
-              }}
-              disabled={saveLoading}
-            >
-              {saveLoading ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                "Save Draft"
-              )}
-            </Button>
-            <Button
-              onClick={handleSaveAndValidate}
-              variant="outlined"
-              color="warning"
-              size="small"
-              sx={{
-                borderRadius: 2,
-                fontWeight: 600,
-                px: 2,
-                py: 0.5,
-                fontSize: 12,
-                letterSpacing: 0.5,
-                boxShadow: 1,
-                transition: "all 0.2s",
-                "&:hover": {
-                  background: "#f57c00",
-                  color: "white",
-                  boxShadow: 2,
-                },
-              }}
-              disabled={saveValidateLoading}
-            >
-              {saveValidateLoading ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                "Save & Validate"
-              )}
-            </Button>
+            {/* Show Save Draft and Save & Validate buttons only when there are added items */}
+            {addedItems.length > 0 && (
+              <>
+                <Button
+                  onClick={handleSave}
+                  variant="outlined"
+                  color="info"
+                  size="small"
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    px: 2,
+                    py: 0.5,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                    boxShadow: 1,
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      background: "#0288d1",
+                      color: "white",
+                      boxShadow: 2,
+                    },
+                  }}
+                  disabled={saveLoading}
+                >
+                  {saveLoading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    "Save Draft"
+                  )}
+                </Button>
+                <Button
+                  onClick={handleSaveAndValidate}
+                  variant="outlined"
+                  color="warning"
+                  size="small"
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    px: 2,
+                    py: 0.5,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                    boxShadow: 1,
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      background: "#f57c00",
+                      color: "white",
+                      boxShadow: 2,
+                    },
+                  }}
+                  disabled={saveValidateLoading}
+                >
+                  {saveValidateLoading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    "Save & Validate"
+                  )}
+                </Button>
+              </>
+            )}
             {isSubmitVisible && (
               <Button
                 onClick={handleSubmitChange}

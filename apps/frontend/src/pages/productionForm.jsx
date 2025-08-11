@@ -264,7 +264,7 @@ export default function ProductionFoam() {
             // Handle percentage rates
             const rate = parseFloat((item.rate || "0").replace("%", "")) || 0;
             const rateFraction = rate / 100;
-            salesTax = Number((unitCost * rateFraction).toFixed(2));
+            salesTax = unitCost * rateFraction;
           }
 
           item.salesTaxApplicable = salesTax.toString();
@@ -309,9 +309,6 @@ export default function ProductionFoam() {
         discountNum;
 
       item.totalValues = Number(totalValue.toFixed(2)).toString();
-      item.salesTaxApplicable = Number(
-        parseFloat(item.salesTaxApplicable || 0).toFixed(2)
-      ).toString();
 
       updatedItems[index] = item;
       return { ...prev, items: updatedItems };
@@ -385,16 +382,81 @@ export default function ProductionFoam() {
       (item) => item.transactioN_DESC === desc
     );
     if (!selectedType) return;
+
+    // Check if there are items with data and show warning
+    const hasItemsWithData = formData.items.some(
+      (item) =>
+        item.hsCode ||
+        item.productDescription ||
+        item.rate ||
+        item.uoM ||
+        parseFloat(item.quantity) > 1 ||
+        parseFloat(item.valueSalesExcludingST) > 0
+    );
+
+    if (hasItemsWithData) {
+      Swal.fire({
+        title: "Warning",
+        text: "Changing the transaction type will reset your items. Are you sure you want to continue?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, change it!",
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // User confirmed - proceed with transaction type change and reset items
+          proceedWithTransactionTypeChange(selectedType);
+          Swal.fire({
+            title: "Items Reset",
+            text: "Your items have been reset due to transaction type change.",
+            icon: "info",
+            confirmButtonColor: "#2A69B0",
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        }
+        // If user cancels, do nothing - the transaction type remains unchanged
+      });
+      return;
+    }
+
+    // If no items with data, proceed normally
+    proceedWithTransactionTypeChange(selectedType);
+  };
+
+  const proceedWithTransactionTypeChange = (selectedType) => {
     console.log("selectedType", selectedType.transactioN_TYPE_ID);
     localStorage.setItem("transactionTypeId", selectedType.transactioN_TYPE_ID);
     localStorage.setItem("saleType", selectedType.transactioN_DESC);
     setFormData((prev) => ({
       ...prev,
       transactionTypeId: selectedType.transactioN_TYPE_ID,
-      items: prev.items.map((item) => ({
-        ...item,
-        saleType: selectedType.transactioN_DESC,
-      })),
+      items: [
+        {
+          hsCode: "",
+          productDescription: "",
+          rate: "",
+          uoM: "",
+          quantity: "1",
+          totalValues: "0",
+          valueSalesExcludingST: "0",
+          fixedNotifiedValueOrRetailPrice: "1",
+          salesTaxApplicable: "0",
+          salesTaxWithheldAtSource: "0",
+          sroScheduleNo: "",
+          sroItemSerialNo: "",
+          saleType: selectedType.transactioN_DESC,
+          isSROScheduleEnabled: false,
+          isSROItemEnabled: false,
+          extraTax: "",
+          furtherTax: "0",
+          fedPayable: "0",
+          discount: "0",
+          isValueSalesManual: false,
+        },
+      ],
     }));
   };
 
@@ -543,9 +605,8 @@ export default function ProductionFoam() {
             furtherTax: Number(rest.furtherTax) || 0,
             fedPayable: Number(rest.fedPayable) || 0,
             discount: Number(rest.discount) || 0,
-            salesTaxApplicable: Number(
-              Number(rest.salesTaxApplicable).toFixed(2)
-            ),
+            salesTaxApplicable:
+              Math.round(Number(rest.salesTaxApplicable) * 100) / 100,
             totalValues: Number(Number(rest.totalValues).toFixed(2)),
           };
 
@@ -622,18 +683,59 @@ export default function ProductionFoam() {
             });
             setIsPrintable(true);
           } else {
-            // Handle different error response structures
-            const postErrorMessage = hasPostValidationResponse
-              ? postRes.data.validationResponse.error
-              : postRes.data.error ||
-                postRes.data.message ||
-                "Invoice submission failed.";
+            // Handle different error response structures with detailed error information
+            let errorMessage = "Invoice submission failed.";
+            let errorDetails = [];
+
+            if (hasPostValidationResponse) {
+              const validation = postRes.data.validationResponse;
+              if (validation.error) {
+                errorMessage = validation.error;
+              }
+              // Check for item-specific errors
+              if (
+                validation.invoiceStatuses &&
+                Array.isArray(validation.invoiceStatuses)
+              ) {
+                validation.invoiceStatuses.forEach((status, index) => {
+                  if (status.error) {
+                    errorDetails.push(`Item ${index + 1}: ${status.error}`);
+                  }
+                });
+              }
+            } else if (postRes.data.error) {
+              errorMessage = postRes.data.error;
+            } else if (postRes.data.message) {
+              errorMessage = postRes.data.message;
+            }
+
+            // Check for additional error details in the response
+            if (
+              postRes.data.invoiceStatuses &&
+              Array.isArray(postRes.data.invoiceStatuses)
+            ) {
+              postRes.data.invoiceStatuses.forEach((status, index) => {
+                if (status.error) {
+                  errorDetails.push(`Item ${index + 1}: ${status.error}`);
+                }
+              });
+            }
+
+            // Combine error message with details
+            const fullErrorMessage =
+              errorDetails.length > 0
+                ? `${errorMessage}\n\nDetails:\n${errorDetails.join("\n")}`
+                : errorMessage;
 
             Swal.fire({
               icon: "error",
-              title: "Error",
-              text: postErrorMessage,
+              title: "FBR Submission Failed",
+              text: fullErrorMessage,
               confirmButtonColor: "#d33",
+              width: "600px",
+              customClass: {
+                popup: "swal-wide",
+              },
             });
           }
         } catch (postError) {
@@ -642,34 +744,132 @@ export default function ProductionFoam() {
             status: postError.response?.status,
             data: postError.response?.data,
           });
-          // Handle different error response structures
+
+          // Enhanced error handling for different types of errors
+          let errorTitle = "Error";
+          let errorMessage = "Failed to submit invoice";
+          let errorDetails = [];
+
+          // Check if it's a validation error from FBR
           const postErrorResponse = postError.response?.data;
-          const postErrorDetails =
-            postErrorResponse?.validationResponse?.error ||
-            postErrorResponse?.error ||
-            postErrorResponse?.message ||
-            postError.message;
+
+          if (postErrorResponse) {
+            // Handle FBR API validation errors
+            const fbrError =
+              postErrorResponse?.validationResponse?.error ||
+              postErrorResponse?.error ||
+              postErrorResponse?.message;
+
+            if (fbrError) {
+              errorTitle = "FBR Submission Error";
+              errorMessage = fbrError;
+
+              // Check for item-specific errors in validation response
+              if (postErrorResponse.validationResponse?.invoiceStatuses) {
+                postErrorResponse.validationResponse.invoiceStatuses.forEach(
+                  (status, index) => {
+                    if (status.error) {
+                      errorDetails.push(`Item ${index + 1}: ${status.error}`);
+                    }
+                  }
+                );
+              }
+            } else {
+              // Handle other API response errors
+              if (
+                postErrorResponse.errors &&
+                Array.isArray(postErrorResponse.errors)
+              ) {
+                errorDetails = postErrorResponse.errors;
+              } else if (postErrorResponse.message) {
+                errorMessage = postErrorResponse.message;
+              }
+            }
+          } else {
+            // Handle network and other errors
+            if (postError.code === "ECONNABORTED") {
+              errorTitle = "Request Timeout";
+              errorMessage = "FBR API request timed out. Please try again.";
+            } else if (postError.code === "ERR_NETWORK") {
+              errorTitle = "Network Error";
+              errorMessage =
+                "Unable to connect to FBR API. Please check your internet connection.";
+            } else if (postError.message) {
+              errorMessage = postError.message;
+            }
+          }
+
+          // Combine error message with details
+          const fullErrorMessage =
+            errorDetails.length > 0
+              ? `${errorMessage}\n\nDetails:\n${errorDetails.join("\n")}`
+              : errorMessage;
 
           Swal.fire({
             icon: "error",
-            title: "Error",
-            text: `Failed to submit invoice: ${postErrorDetails}`,
+            title: errorTitle,
+            text: fullErrorMessage,
             confirmButtonColor: "#d33",
+            width: "600px",
+            customClass: {
+              popup: "swal-wide",
+            },
           });
         }
       } else {
-        // Handle different error response structures
-        const validationErrorMessage = hasValidationResponse
-          ? validateRes.data.validationResponse.error
-          : validateRes.data.error ||
-            validateRes.data.message ||
-            "Invoice validation failed.";
+        // Handle different error response structures with detailed error information
+        let errorMessage = "Invoice validation failed.";
+        let errorDetails = [];
+
+        if (hasValidationResponse) {
+          const validation = validateRes.data.validationResponse;
+          if (validation.error) {
+            errorMessage = validation.error;
+          }
+          // Check for item-specific errors
+          if (
+            validation.invoiceStatuses &&
+            Array.isArray(validation.invoiceStatuses)
+          ) {
+            validation.invoiceStatuses.forEach((status, index) => {
+              if (status.error) {
+                errorDetails.push(`Item ${index + 1}: ${status.error}`);
+              }
+            });
+          }
+        } else if (validateRes.data.error) {
+          errorMessage = validateRes.data.error;
+        } else if (validateRes.data.message) {
+          errorMessage = validateRes.data.message;
+        }
+
+        // Check for additional error details in the response
+        if (
+          validateRes.data.invoiceStatuses &&
+          Array.isArray(validateRes.data.invoiceStatuses)
+        ) {
+          validateRes.data.invoiceStatuses.forEach((status, index) => {
+            if (status.error) {
+              errorDetails.push(`Item ${index + 1}: ${status.error}`);
+            }
+          });
+        }
+
+        // Combine error message with details
+        const fullErrorMessage =
+          errorDetails.length > 0
+            ? `${errorMessage}\n\nDetails:\n${errorDetails.join("\n")}`
+            : errorMessage;
 
         Swal.fire({
           icon: "error",
-          title: "Error",
-          text: validationErrorMessage,
+          title: "FBR Validation Failed",
+          text: fullErrorMessage,
           confirmButtonColor: "#d33",
+          width: "600px",
+          customClass: {
+            popup: "swal-wide",
+          },
         });
       }
     } catch (error) {

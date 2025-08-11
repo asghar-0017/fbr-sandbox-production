@@ -3,7 +3,7 @@
 
 export const generateQRCode = (invoiceData) => {
   // Create QR code with just the invoice number
-  const qrText = invoiceData.invoiceNumber || invoiceData.invoice_number || '';
+  const qrText = invoiceData.invoiceNumber || invoiceData.invoice_number || "";
 
   // For now, return a placeholder QR code
   // In a real implementation, you would use a QR code library like qrcode.js
@@ -17,12 +17,12 @@ export const generateQRCode = (invoiceData) => {
 };
 
 export const generateInvoiceQRCode = (invoice) => {
-  if (!invoice) return '';
-  
+  if (!invoice) return "";
+
   try {
     return generateQRCode(invoice);
   } catch (error) {
-    console.error('Error generating QR code:', error);
-    return '';
+    console.error("Error generating QR code:", error);
+    return "";
   }
-}; 
+};

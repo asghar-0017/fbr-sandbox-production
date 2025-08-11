@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
-import { getRegistrationType } from '../API/FBRService';
+import React, { useState } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Alert,
+} from "@mui/material";
+import { getRegistrationType } from "../API/FBRService";
 
 const FBRTestComponent = () => {
-  const [ntnCnic, setNtnCnic] = useState('');
+  const [ntnCnic, setNtnCnic] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleTest = async () => {
     if (!ntnCnic) {
-      setResult({ success: false, message: 'Please enter an NTN/CNIC' });
+      setResult({ success: false, message: "Please enter an NTN/CNIC" });
       return;
     }
 
@@ -25,7 +32,7 @@ const FBRTestComponent = () => {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, mx: 'auto' }}>
+    <Box sx={{ p: 3, maxWidth: 600, mx: "auto" }}>
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           FBR API Test Component
@@ -33,7 +40,7 @@ const FBRTestComponent = () => {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Test the FBR registration type API integration
         </Typography>
-        
+
         <TextField
           fullWidth
           label="NTN/CNIC"
@@ -42,21 +49,18 @@ const FBRTestComponent = () => {
           placeholder="Enter NTN/CNIC to test"
           sx={{ mb: 2 }}
         />
-        
+
         <Button
           variant="contained"
           onClick={handleTest}
           disabled={loading || !ntnCnic}
           sx={{ mb: 2 }}
         >
-          {loading ? 'Testing...' : 'Test API'}
+          {loading ? "Testing..." : "Test API"}
         </Button>
 
         {result && (
-          <Alert 
-            severity={result.success ? 'success' : 'error'}
-            sx={{ mt: 2 }}
-          >
+          <Alert severity={result.success ? "success" : "error"} sx={{ mt: 2 }}>
             <Typography variant="body2">
               <strong>Result:</strong> {result.message}
             </Typography>

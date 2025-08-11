@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { updateTokenManager, api } from '../API/Api';
+import { createContext, useContext, useState, useEffect } from "react";
+import { updateTokenManager, api } from "../API/Api";
 
 const TenantSelectionContext = createContext();
 
@@ -10,38 +10,43 @@ export const TenantSelectionProvider = ({ children }) => {
 
   // Debug effect to track tokensLoaded changes
   useEffect(() => {
-    console.log('TenantSelectionProvider: tokensLoaded changed to:', tokensLoaded);
+    console.log(
+      "TenantSelectionProvider: tokensLoaded changed to:",
+      tokensLoaded
+    );
   }, [tokensLoaded]);
 
   useEffect(() => {
     const loadStoredTenant = async () => {
-      const storedTenant = localStorage.getItem('selectedTenant');
-      
+      const storedTenant = localStorage.getItem("selectedTenant");
+
       if (storedTenant) {
         try {
           const tenant = JSON.parse(storedTenant);
-                    setSelectedTenant({
+          setSelectedTenant({
             ...tenant,
-            sandboxTestToken: null
+            sandboxProductionToken: null,
           });
           setTokensLoaded(false);
-          
+
           try {
-            const response = await api.get(`/admin/tenants/${tenant.tenant_id}`);
-            
+            const response = await api.get(
+              `/admin/tenants/${tenant.tenant_id}`
+            );
+
             if (response.data.success) {
               const tenantWithTokens = response.data.data;
               setSelectedTenant(tenantWithTokens);
               setTokensLoaded(true);
             } else {
               setTokensLoaded(false);
- 
+
               setTimeout(() => {
                 setTokensLoaded(true);
               }, 5000); // 5 seconds fallback
             }
           } catch (error) {
-            console.error('Error fetching tokens for stored Company:', error);
+            console.error("Error fetching tokens for stored Company:", error);
             // Keep the tenant without tokens if we can't fetch them
             setTokensLoaded(false);
             setTimeout(() => {
@@ -49,50 +54,49 @@ export const TenantSelectionProvider = ({ children }) => {
             }, 5000); // 5 seconds fallback
           }
         } catch (error) {
-          console.error('Error parsing stored Company:', error);
-          localStorage.removeItem('selectedCompany');
+          console.error("Error parsing stored Company:", error);
+          localStorage.removeItem("selectedCompany");
           setTokensLoaded(false);
         }
       } else {
         setTokensLoaded(false);
       }
     };
-    
+
     loadStoredTenant();
   }, []);
 
   useEffect(() => {
     if (selectedTenant) {
-      const { sandboxTestToken, ...tenantData } = selectedTenant;
-      localStorage.setItem('selectedTenant', JSON.stringify(tenantData));
+      const { sandboxProductionToken, ...tenantData } = selectedTenant;
+      localStorage.setItem("selectedTenant", JSON.stringify(tenantData));
     } else {
-      localStorage.removeItem('selectedTenant');
+      localStorage.removeItem("selectedTenant");
     }
   }, [selectedTenant]);
 
   const getSandboxToken = () => {
-    const token = selectedTenant?.sandboxTestToken || null;
+    const token = selectedTenant?.sandboxProductionToken || null;
     return token;
   };
 
   const getProductionToken = () => {
-    const token = selectedTenant?.sandboxTestToken || null; // Use test token for both sandbox and production
+    const token = selectedTenant?.sandboxProductionToken || null; // Use test token for both sandbox and production
     return token;
   };
 
-  const getCurrentToken = (environment = 'sandbox') => {
+  const getCurrentToken = (environment = "sandbox") => {
     const token = getSandboxToken();
     return token;
   };
 
   useEffect(() => {
-
     if (selectedTenant && tokensLoaded) {
       setTimeout(() => {
         updateTokenManager({
           getSandboxToken,
           getProductionToken,
-          getCurrentToken
+          getCurrentToken,
         });
       }, 50);
     } else {
@@ -100,7 +104,7 @@ export const TenantSelectionProvider = ({ children }) => {
       updateTokenManager({
         getSandboxToken: () => null,
         getProductionToken: () => null,
-        getCurrentToken: () => null
+        getCurrentToken: () => null,
       });
     }
   }, [selectedTenant, tokensLoaded]);
@@ -108,8 +112,8 @@ export const TenantSelectionProvider = ({ children }) => {
   const selectTenant = async (tenant) => {
     try {
       setTokensLoaded(false);
-      
-      if (!tenant.sandboxTestToken) {
+
+      if (!tenant.sandboxProductionToken) {
         const response = await api.get(`/admin/tenants/${tenant.tenant_id}`);
         if (response.data.success) {
           const tenantWithTokens = response.data.data;
@@ -127,7 +131,7 @@ export const TenantSelectionProvider = ({ children }) => {
         setTokensLoaded(true);
       }
     } catch (error) {
-      console.error('Error fetching tenant tokens:', error);
+      console.error("Error fetching tenant tokens:", error);
       setSelectedTenant(tenant);
       setTokensLoaded(false);
       setTimeout(() => {
@@ -138,25 +142,27 @@ export const TenantSelectionProvider = ({ children }) => {
 
   const retryTokenFetch = async () => {
     if (!selectedTenant) {
-      console.warn('No tenant selected, cannot retry token fetch');
+      console.warn("No tenant selected, cannot retry token fetch");
       return false;
     }
 
     try {
       setTokensLoaded(false);
-      const response = await api.get(`/admin/tenants/${selectedTenant.tenant_id}`);
+      const response = await api.get(
+        `/admin/tenants/${selectedTenant.tenant_id}`
+      );
       if (response.data.success) {
         const tenantWithTokens = response.data.data;
         setSelectedTenant(tenantWithTokens);
         setTokensLoaded(true);
         return true;
       } else {
-        console.log('TenantSelectionProvider: Failed to fetch tokens on retry');
+        console.log("TenantSelectionProvider: Failed to fetch tokens on retry");
         setTokensLoaded(false);
         return false;
       }
     } catch (error) {
-      console.error('Error fetching tenant tokens on retry:', error);
+      console.error("Error fetching tenant tokens on retry:", error);
       setTokensLoaded(false);
       return false;
     }
@@ -165,6 +171,7 @@ export const TenantSelectionProvider = ({ children }) => {
   const clearSelectedTenant = () => {
     setSelectedTenant(null);
     setTokensLoaded(false);
+    localStorage.removeItem("selectedTenant");
   };
 
   const isTenantSelected = () => {
@@ -194,7 +201,7 @@ export const TenantSelectionProvider = ({ children }) => {
         loading,
         setLoading,
         tokensLoaded,
-        retryTokenFetch
+        retryTokenFetch,
       }}
     >
       {children}
@@ -205,7 +212,9 @@ export const TenantSelectionProvider = ({ children }) => {
 export const useTenantSelection = () => {
   const context = useContext(TenantSelectionContext);
   if (!context) {
-    throw new Error('useTenantSelection must be used within a TenantSelectionProvider');
+    throw new Error(
+      "useTenantSelection must be used within a TenantSelectionProvider"
+    );
   }
   return context;
-}; 
+};

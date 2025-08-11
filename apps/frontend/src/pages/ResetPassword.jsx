@@ -11,7 +11,7 @@ import {
 import LockIcon from "@mui/icons-material/Lock";
 import { useAuth } from "../Context/AuthProvider";
 import axios from "axios";
-import {API_CONFIG} from "../API/Api";
+import { API_CONFIG } from "../API/Api";
 
 const { apiKeyLocal } = API_CONFIG;
 

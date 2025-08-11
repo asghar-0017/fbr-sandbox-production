@@ -1,8 +1,8 @@
 // FBR API Service for checking registration status
-import { API_CONFIG } from './Api';
-import axios from 'axios';
+import { API_CONFIG } from "./Api";
+import axios from "axios";
 
-const FBR_API_BASE_URL = 'https://gw.fbr.gov.pk/dist/v1';
+const FBR_API_BASE_URL = "https://gw.fbr.gov.pk/dist/v1";
 
 export const checkRegistrationStatus = async (registrationNo) => {
   try {
@@ -10,47 +10,61 @@ export const checkRegistrationStatus = async (registrationNo) => {
     const token = API_CONFIG.getCurrentToken("sandbox");
 
     if (!token) {
-      throw new Error('No FBR token found. Please ensure the Company is selected and credentials are loaded.');
+      throw new Error(
+        "No FBR token found. Please ensure the Company is selected and credentials are loaded."
+      );
     }
 
     const config = {
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     };
 
     // Use POST request as per the API specification
     const response = await axios({
-      method: 'POST',
+      method: "POST",
       url: `${FBR_API_BASE_URL}/Get_Reg_Type`,
       headers: config.headers,
       data: {
-        Registration_No: registrationNo
+        Registration_No: registrationNo,
       },
-      timeout: 10000 // 10 second timeout
+      timeout: 10000, // 10 second timeout
     });
 
-    console.log('FBR Registration Status API Response:', response.data);
+    console.log("FBR Registration Status API Response:", response.data);
     return response.data;
   } catch (error) {
-    console.error('Error checking registration status:', error);
-    
+    console.error("Error checking registration status:", error);
+
     // Handle specific error cases
     if (error.response?.status === 401) {
-      throw new Error('Authentication failed. Please check your FBR credentials.');
+      throw new Error(
+        "Authentication failed. Please check your FBR credentials."
+      );
     } else if (error.response?.status === 404) {
-      throw new Error('Registration number not found in FBR system.');
+      throw new Error("Registration number not found in FBR system.");
     } else if (error.response?.status === 500) {
-      throw new Error('FBR system is temporarily unavailable. Please try again later or contact support.');
+      throw new Error(
+        "FBR system is temporarily unavailable. Please try again later or contact support."
+      );
     } else if (error.response?.data) {
-      throw new Error(error.response.data.message || 'Error checking registration status.');
-    } else if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout. FBR system may be slow. Please try again.');
-    } else if (error.code === 'ERR_NETWORK') {
-      throw new Error('Network error. Please check your internet connection and try again.');
+      throw new Error(
+        error.response.data.message || "Error checking registration status."
+      );
+    } else if (error.code === "ECONNABORTED") {
+      throw new Error(
+        "Request timeout. FBR system may be slow. Please try again."
+      );
+    } else if (error.code === "ERR_NETWORK") {
+      throw new Error(
+        "Network error. Please check your internet connection and try again."
+      );
     } else {
-      throw new Error('Unable to connect to FBR system. Please try again later.');
+      throw new Error(
+        "Unable to connect to FBR system. Please try again later."
+      );
     }
   }
 };
@@ -59,31 +73,37 @@ export const checkRegistrationStatus = async (registrationNo) => {
 export const getRegistrationType = async (registrationNo) => {
   try {
     const response = await checkRegistrationStatus(registrationNo);
-    
-    if (response && response.statuscode === "00" && response.REGISTRATION_TYPE) {
+
+    if (
+      response &&
+      response.statuscode === "00" &&
+      response.REGISTRATION_TYPE
+    ) {
       return {
         success: true,
         registrationType: response.REGISTRATION_TYPE,
         registrationNo: response.REGISTRATION_NO,
-        message: `Registration type automatically filled: ${response.REGISTRATION_TYPE}`
+        message: `Registration type automatically filled: ${response.REGISTRATION_TYPE}`,
       };
     } else if (response && response.statuscode !== "00") {
       return {
         success: false,
-        message: response.message || 'Invalid registration number or FBR system error.'
+        message:
+          response.message ||
+          "Invalid registration number or FBR system error.",
       };
     } else {
       return {
         success: false,
-        message: 'Unable to fetch registration type from FBR system.'
+        message: "Unable to fetch registration type from FBR system.",
       };
     }
   } catch (error) {
-    console.error('Error fetching registration type:', error);
+    console.error("Error fetching registration type:", error);
     return {
       success: false,
-      message: error.message || 'Error fetching registration type.',
-      error: error.message
+      message: error.message || "Error fetching registration type.",
+      error: error.message,
     };
   }
 };
@@ -93,7 +113,7 @@ export const validateRegistrationStatus = (selectedType, apiResponse) => {
   if (!apiResponse || !apiResponse.REGISTRATION_TYPE) {
     return {
       isValid: false,
-      message: 'Unable to verify registration status. Please try again.'
+      message: "Unable to verify registration status. Please try again.",
     };
   }
 
@@ -101,26 +121,26 @@ export const validateRegistrationStatus = (selectedType, apiResponse) => {
   const selectedStatus = selectedType.toLowerCase();
 
   // If user selected "Registered" but API returns "unregistered"
-  if (selectedStatus === 'registered' && apiStatus === 'unregistered') {
+  if (selectedStatus === "registered" && apiStatus === "unregistered") {
     return {
       isValid: false,
-      message: `Registration status mismatch! The NTN/CNIC ${apiResponse.REGISTRATION_NO} is registered as "Unregistered" in FBR system, but you selected "Registered". Please verify the registration type.`
+      message: `Registration status mismatch! The NTN/CNIC ${apiResponse.REGISTRATION_NO} is registered as "Unregistered" in FBR system, but you selected "Registered". Please verify the registration type.`,
     };
   }
 
   // If user selected "Unregistered" but API returns "registered"
-  if (selectedStatus === 'unregistered' && apiStatus === 'registered') {
+  if (selectedStatus === "unregistered" && apiStatus === "registered") {
     return {
       isValid: false,
-      message: `Registration status mismatch! The NTN/CNIC ${apiResponse.REGISTRATION_NO} is registered as "Registered" in FBR system, but you selected "Unregistered". Please verify the registration type.`
+      message: `Registration status mismatch! The NTN/CNIC ${apiResponse.REGISTRATION_NO} is registered as "Registered" in FBR system, but you selected "Unregistered". Please verify the registration type.`,
     };
   }
 
   return {
     isValid: true,
-    message: 'Registration status verified successfully!'
+    message: "Registration status verified successfully!",
   };
-}; 
+};
 
 // New function to post invoice data to FBR and get invoice number
 export const postInvoiceDataToFBR = async (invoiceData) => {
@@ -129,27 +149,29 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
     const token = API_CONFIG.getCurrentToken("sandbox");
 
     if (!token) {
-      throw new Error('No FBR token found. Please ensure the Company is selected and credentials are loaded.');
+      throw new Error(
+        "No FBR token found. Please ensure the Company is selected and credentials are loaded."
+      );
     }
 
     const config = {
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     };
 
     // Call FBR API to post invoice data
     const response = await axios({
-      method: 'POST',
-      url: `${FBR_API_BASE_URL}/di_data/v1/di/postinvoicedata_sb`,
+      method: "POST",
+      url: `${FBR_API_BASE_URL}/di_data/v1/di/postinvoicedata`,
       headers: config.headers,
       data: invoiceData,
-      timeout: 30000 // 30 second timeout for invoice submission
+      timeout: 30000, // 30 second timeout for invoice submission
     });
 
-    console.log('FBR Invoice Submission Response:', response.data);
-    
+    console.log("FBR Invoice Submission Response:", response.data);
+
     // Handle different FBR response structures
     let fbrInvoiceNumber = null;
     let isSuccess = false;
@@ -166,7 +188,10 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
         }
       }
       // Check for direct response structure (new format)
-      else if (response.data && (response.data.invoiceNumber || response.data.success)) {
+      else if (
+        response.data &&
+        (response.data.invoiceNumber || response.data.success)
+      ) {
         isSuccess = true;
         fbrInvoiceNumber = response.data.invoiceNumber;
       }
@@ -176,8 +201,10 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
         errorDetails = response.data;
       }
       // Check for empty response - this might be a successful submission
-      else if (!response.data || response.data === '') {
-        console.log('FBR returned empty response with 200 status - treating as successful submission');
+      else if (!response.data || response.data === "") {
+        console.log(
+          "FBR returned empty response with 200 status - treating as successful submission"
+        );
         isSuccess = true;
         // For empty responses, we'll use a generated invoice number
         fbrInvoiceNumber = `FBR_${Date.now()}`;
@@ -185,20 +212,22 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
       // If response is unexpected, treat as success if status is 200
       else {
         isSuccess = true;
-        console.log('FBR returned 200 status with unexpected response structure, treating as success');
+        console.log(
+          "FBR returned 200 status with unexpected response structure, treating as success"
+        );
       }
     }
 
     if (!isSuccess) {
-      const details = errorDetails || { 
-        raw: response.data ?? null, 
-        note: 'Unexpected FBR response structure',
-        status: response.status
+      const details = errorDetails || {
+        raw: response.data ?? null,
+        note: "Unexpected FBR response structure",
+        status: response.status,
       };
 
       const collectErrorMessages = (det) => {
         const messages = [];
-        if (det && typeof det === 'object') {
+        if (det && typeof det === "object") {
           if (det.error) messages.push(det.error);
           if (Array.isArray(det.invoiceStatuses)) {
             det.invoiceStatuses.forEach((s) => {
@@ -220,41 +249,120 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
 
       const errorMessages = collectErrorMessages(details);
       const message = errorMessages.length
-        ? `FBR submission failed: ${errorMessages.join('; ')}`
-        : 'FBR submission failed';
+        ? `FBR submission failed: ${errorMessages.join("; ")}`
+        : "FBR submission failed";
 
       throw new Error(message);
     }
 
     // Ensure we have a valid FBR invoice number
-    if (!fbrInvoiceNumber || fbrInvoiceNumber.trim() === '') {
-      throw new Error('FBR submission failed: No invoice number received from FBR');
+    if (!fbrInvoiceNumber || fbrInvoiceNumber.trim() === "") {
+      throw new Error(
+        "FBR submission failed: No invoice number received from FBR"
+      );
     }
 
     return {
       success: true,
       fbrInvoiceNumber,
-      message: 'Invoice submitted to FBR successfully'
+      message: "Invoice submitted to FBR successfully",
     };
-
   } catch (error) {
-    console.error('Error posting invoice data to FBR:', error);
-    
+    console.error("Error posting invoice data to FBR:", error);
+
     // Handle specific error cases
     if (error.response?.status === 401) {
-      throw new Error('Authentication failed. Please check your FBR credentials.');
+      throw new Error(
+        "Authentication failed. Please check your FBR credentials."
+      );
     } else if (error.response?.status === 400) {
-      throw new Error('Invalid invoice data. Please check your invoice details.');
+      throw new Error(
+        "Invalid invoice data. Please check your invoice details."
+      );
     } else if (error.response?.status === 500) {
-      throw new Error('FBR system is temporarily unavailable. Please try again later.');
+      throw new Error(
+        "FBR system is temporarily unavailable. Please try again later."
+      );
     } else if (error.response?.data) {
-      throw new Error(error.response.data.message || 'Error submitting invoice to FBR.');
-    } else if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout. FBR system may be slow. Please try again.');
-    } else if (error.code === 'ERR_NETWORK') {
-      throw new Error('Network error. Please check your internet connection and try again.');
+      throw new Error(
+        error.response.data.message || "Error submitting invoice to FBR."
+      );
+    } else if (error.code === "ECONNABORTED") {
+      throw new Error(
+        "Request timeout. FBR system may be slow. Please try again."
+      );
+    } else if (error.code === "ERR_NETWORK") {
+      throw new Error(
+        "Network error. Please check your internet connection and try again."
+      );
     } else {
-      throw new Error(error.message || 'Unable to connect to FBR system. Please try again later.');
+      throw new Error(
+        error.message ||
+          "Unable to connect to FBR system. Please try again later."
+      );
     }
   }
-}; 
+};
+
+// New function to fetch transaction types from FBR
+export const getTransactionTypes = async () => {
+  try {
+    // Get current token dynamically from context
+    const token = API_CONFIG.getCurrentToken("production");
+
+    if (!token) {
+      throw new Error(
+        "No FBR token found. Please ensure the Company is selected and credentials are loaded."
+      );
+    }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    };
+
+    // Use GET request to fetch transaction types
+    const response = await axios({
+      method: "GET",
+      url: "https://gw.fbr.gov.pk/pdi/v1/transtypecode",
+      headers: config.headers,
+      timeout: 10000, // 10 second timeout
+    });
+
+    console.log("FBR Transaction Types API Response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching transaction types:", error);
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      throw new Error(
+        "Authentication failed. Please check your FBR credentials."
+      );
+    } else if (error.response?.status === 404) {
+      throw new Error("Transaction types endpoint not found.");
+    } else if (error.response?.status === 500) {
+      throw new Error(
+        "FBR system is temporarily unavailable. Please try again later or contact support."
+      );
+    } else if (error.response?.data) {
+      throw new Error(
+        error.response.data.message || "Error fetching transaction types."
+      );
+    } else if (error.code === "ECONNABORTED") {
+      throw new Error(
+        "Request timeout. FBR system may be slow. Please try again."
+      );
+    } else if (error.code === "ERR_NETWORK") {
+      throw new Error(
+        "Network error. Please check your internet connection and try again."
+      );
+    } else {
+      throw new Error(
+        "Unable to connect to FBR system. Please try again later."
+      );
+    }
+  }
+};

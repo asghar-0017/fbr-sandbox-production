@@ -6,7 +6,7 @@ The submit button now follows a two-step process to ensure data integrity and pr
 ## Flow Steps
 
 ### Step 1: FBR API Call
-- **Endpoint**: `POST https://gw.fbr.gov.pk/dist/v1/di_data/v1/di/postinvoicedata_sb`
+- **Endpoint**: `POST https://gw.fbr.gov.pk/dist/v1/di_data/v1/di/postinvoicedata`
 - **Purpose**: Submit invoice data to FBR and get the official invoice number
 - **Response**: FBR returns an invoice number (or relevant ID) on success
 

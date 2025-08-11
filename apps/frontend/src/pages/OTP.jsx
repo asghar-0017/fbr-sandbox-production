@@ -12,7 +12,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import { Email } from "@mui/icons-material";
 import { MuiOtpInput } from "mui-one-time-password-input";
 import axios from "axios";
-import {API_CONFIG} from "../API/Api";
+import { API_CONFIG } from "../API/Api";
 
 const { apiKeyLocal } = API_CONFIG;
 

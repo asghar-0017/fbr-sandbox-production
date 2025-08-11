@@ -11,7 +11,7 @@ import {
   Paper,
   Button,
   useTheme,
-  CircularProgress,
+  Skeleton,
   TextField,
   MenuItem,
   InputAdornment,
@@ -287,18 +287,89 @@ export default function BasicTable() {
           </Typography>
         </Box>
       ) : loading ? (
-        <Box
-          sx={{
-            textAlign: "center",
-            p: 4,
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: theme.palette.background.default,
-          }}
-        >
-          <CircularProgress />
+        <Box sx={{ p: { xs: 1, sm: 3 }, maxWidth: 1200, mx: "auto" }}>
+          {/* Header Section Skeleton */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              mb: 3,
+            }}
+          >
+            <Skeleton variant="text" width={200} height={40} />
+          </Box>
+
+          {/* Search and Filter Controls Skeleton */}
+          <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+            <Skeleton variant="rounded" width={260} height={40} />
+            <Skeleton variant="rounded" width={160} height={40} />
+            <Skeleton variant="rounded" width={140} height={40} />
+            <Skeleton variant="rounded" width={140} height={40} />
+            <Skeleton variant="rounded" width={120} height={40} />
+          </Box>
+
+          {/* Table Skeleton */}
+          <TableContainer
+            component={Paper}
+            elevation={4}
+            sx={{
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: 4,
+            }}
+          >
+            <Table
+              size="small"
+              sx={{
+                minWidth: 650,
+                "& .MuiTableCell-root": { py: 1.9, px: 1, fontSize: 12 },
+                "& .MuiTableCell-head": {
+                  py: 0.75,
+                  fontSize: 13,
+                  fontWeight: 700,
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow sx={{ background: "#EDEDED" }}>
+                  {[...Array(9)].map((_, index) => (
+                    <TableCell key={index}>
+                      <Skeleton variant="text" width={80} height={20} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[...Array(5)].map((_, rowIndex) => (
+                  <TableRow key={rowIndex}>
+                    {[...Array(9)].map((_, colIndex) => (
+                      <TableCell key={`${rowIndex}-${colIndex}`}>
+                        <Skeleton
+                          variant="text"
+                          width={colIndex === 8 ? 120 : 100}
+                          height={16}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination Skeleton */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mt: 2,
+            }}
+          >
+            <Skeleton variant="text" width={200} height={20} />
+            <Skeleton variant="rounded" width={300} height={32} />
+          </Box>
         </Box>
       ) : (
         <Box sx={{ p: { xs: 1, sm: 3 }, maxWidth: 1200, mx: "auto" }}>
@@ -459,12 +530,12 @@ export default function BasicTable() {
                     >
                       {[
                         "System ID",
-                        "Invoice Number", 
+                        "Invoice Number",
                         "Invoice Date",
                         "Invoice Type",
                         "Buyer",
                         "Buyer NTN",
-                        "Scenario ID",
+                        "Transaction ID",
                         "HS Code",
                         "Actions",
                       ].map((heading) => (
@@ -506,7 +577,7 @@ export default function BasicTable() {
                           sx={{
                             fontWeight: 700,
                             fontSize: 13,
-                            color: "#1976d2"
+                            color: "#1976d2",
                           }}
                         >
                           {row.systemInvoiceId || "N/A"}
@@ -566,7 +637,7 @@ export default function BasicTable() {
                           </Box>
                         </TableCell>
                         <TableCell align="center">
-                          {row.scenarioId || "N/A"}
+                          {row.transctypeId || "N/A"}
                         </TableCell>
                         <TableCell align="center">
                           {row.items && row.items.length > 0

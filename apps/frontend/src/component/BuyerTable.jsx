@@ -13,7 +13,7 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
-  CircularProgress,
+  Skeleton,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SentimentDissatisfiedIcon from "@mui/icons-material/SentimentDissatisfied";
@@ -57,17 +57,84 @@ export default function BuyerTable({
   return (
     <Box sx={{ p: { xs: 1, sm: 3 }, maxWidth: 1200, mx: "auto" }}>
       {loading ? (
-        <Box
-          sx={{
-            textAlign: "center",
-            p: 4,
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <CircularProgress />
+        <Box sx={{ p: { xs: 1, sm: 3 }, maxWidth: 1200, mx: "auto" }}>
+          {/* Header Section Skeleton */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              mb: 3,
+            }}
+          >
+            <Skeleton variant="text" width={200} height={40} />
+            <Box sx={{ flexGrow: 1 }} />
+            <Skeleton variant="rounded" width={120} height={36} />
+          </Box>
+
+          {/* Search and Controls Skeleton */}
+          <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+            <Skeleton variant="rounded" width={260} height={40} />
+            <Skeleton variant="rounded" width={120} height={40} />
+          </Box>
+
+          {/* Table Skeleton */}
+          <TableContainer
+            component={Paper}
+            elevation={4}
+            sx={{ borderRadius: 3, overflow: "hidden", boxShadow: 4 }}
+          >
+            <Table
+              size="small"
+              sx={{
+                minWidth: 650,
+                "& .MuiTableCell-root": { py: 1.9, px: 1, fontSize: 12 },
+                "& .MuiTableCell-head": {
+                  py: 0.75,
+                  fontSize: 13,
+                  fontWeight: 700,
+                },
+              }}
+            >
+              <TableHead>
+                <TableRow sx={{ background: "#EDEDED" }}>
+                  {[...Array(6)].map((_, index) => (
+                    <TableCell key={index}>
+                      <Skeleton variant="text" width={80} height={20} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[...Array(5)].map((_, rowIndex) => (
+                  <TableRow key={rowIndex}>
+                    {[...Array(6)].map((_, colIndex) => (
+                      <TableCell key={`${rowIndex}-${colIndex}`}>
+                        <Skeleton
+                          variant="text"
+                          width={colIndex === 5 ? 120 : 100}
+                          height={16}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination Skeleton */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mt: 2,
+            }}
+          >
+            <Skeleton variant="text" width={200} height={20} />
+            <Skeleton variant="rounded" width={300} height={32} />
+          </Box>
         </Box>
       ) : (
         <>

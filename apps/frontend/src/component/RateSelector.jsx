@@ -262,18 +262,18 @@ const RateSelector = ({
     item.rate &&
     !transactionTypeId;
 
-  // Improved logic to determine when to show scenario message
-  // Don't show scenario message if we have a rate value (editing mode) or if transactionTypeId is available
-  const showScenarioMessage =
+  // Improved logic to determine when to show transaction type message
+  // Don't show transaction type message if we have a rate value (editing mode) or if transactionTypeId is available
+  const showTransactionTypeMessage =
     !transactionTypeId && !isEditingWithRate && !item.rate;
-  const showProvinceMessage = !showScenarioMessage && !selectedProvince;
+  const showProvinceMessage = !showTransactionTypeMessage && !selectedProvince;
 
   return (
     <Box sx={{ flex: "1 1 22%", minWidth: "180px" }}>
       <FormControl
         fullWidth
         size="small"
-        error={showScenarioMessage || showProvinceMessage}
+        error={showTransactionTypeMessage || showProvinceMessage}
       >
         <InputLabel id={`rate-${index}`}>Rate</InputLabel>
         <Select
@@ -281,7 +281,9 @@ const RateSelector = ({
           value={item.rate || ""}
           label="Rate"
           onChange={handleRateChange}
-          disabled={showScenarioMessage || showProvinceMessage || loading}
+          disabled={
+            showTransactionTypeMessage || showProvinceMessage || loading
+          }
         >
           {/* Debug info for editing mode */}
           {localStorage.getItem("editingInvoice") === "true" && item.rate && (
@@ -289,8 +291,8 @@ const RateSelector = ({
               Debug: Editing mode with rate "{item.rate}" for item {index}
             </div>
           )}
-          {showScenarioMessage ? (
-            <MenuItem value="">Please select scenario first</MenuItem>
+          {showTransactionTypeMessage ? (
+            <MenuItem value="">Please select transaction type first</MenuItem>
           ) : showProvinceMessage ? (
             <MenuItem value="">Please select province first</MenuItem>
           ) : loading ? (
@@ -305,11 +307,11 @@ const RateSelector = ({
             ))
           )}
         </Select>
-        {showScenarioMessage && (
+        {showTransactionTypeMessage && (
           <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
             {isEditingWithRate
-              ? "Loading scenario data..."
-              : "Please select scenario first."}
+              ? "Loading transaction type data..."
+              : "Please select transaction type first."}
           </Box>
         )}
         {showProvinceMessage && (

@@ -16,6 +16,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Alert,
 } from "@mui/material";
 import {
   Business,
@@ -32,7 +33,7 @@ import IconButton from "@mui/material/IconButton";
 import { FaTrash, FaEdit } from "react-icons/fa";
 import { IoIosAddCircle } from "react-icons/io";
 import dayjs from "dayjs";
-import { scenarioData } from "../component/ScnerioData";
+import { getTransactionTypes } from "../API/FBRService";
 import { fetchData, postData } from "../API/GetApi";
 import RateSelector from "../component/RateSelector";
 import SROScheduleNumber from "../component/SROScheduleNumber";
@@ -67,7 +68,7 @@ export default function CreateInvoice() {
     buyerAddress: "",
     buyerRegistrationType: "",
     invoiceRefNo: "",
-    scenarioId: "",
+    transctypeId: "",
     items: [
       {
         hsCode: "",
@@ -105,7 +106,7 @@ export default function CreateInvoice() {
   const [addedItems, setAddedItems] = React.useState([]);
   const [editingItemIndex, setEditingItemIndex] = React.useState(null);
 
-  const [scenario, setScenario] = React.useState([]);
+  const [transactionTypes, setTransactionTypes] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [saveValidateLoading, setSaveValidateLoading] = React.useState(false);
@@ -221,7 +222,11 @@ export default function CreateInvoice() {
           buyerAddress: invoiceData.buyerAddress || "",
           buyerRegistrationType: invoiceData.buyerRegistrationType || "",
           invoiceRefNo: invoiceData.invoiceRefNo || "",
-          scenarioId: invoiceData.scenario_id || invoiceData.scenarioId || "",
+          transctypeId:
+            invoiceData.transctypeId ||
+            invoiceData.scenario_id ||
+            invoiceData.scenarioId ||
+            "",
           items:
             invoiceData.items && invoiceData.items.length > 0
               ? invoiceData.items.map((item) => ({
@@ -368,7 +373,10 @@ export default function CreateInvoice() {
 
         // Debug logging for edit data
         console.log("Edit data summary:", {
-          scenarioId: invoiceData.scenario_id || invoiceData.scenarioId,
+          transctypeId:
+            invoiceData.transctypeId ||
+            invoiceData.scenario_id ||
+            invoiceData.scenarioId,
           transactionTypeId: transactionTypeId,
           hasItems: invoiceData.items && invoiceData.items.length > 0,
           firstItemRate:
@@ -560,74 +568,26 @@ export default function CreateInvoice() {
         })(),
         (async () => {
           try {
-            const token = API_CONFIG.getCurrentToken("sandbox");
-            console.log(
-              "Token for transtypecode API:",
-              token ? "Available" : "Not available"
-            );
-            console.log("Token value:", token);
-
-            if (!token) {
-              console.error("No token available for transtypecode API");
-              setScenario([]);
-              return;
-            }
-
-            const response = await fetch(
-              "https://gw.fbr.gov.pk/pdi/v1/transtypecode",
-              {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-
-            console.log("Transtypecode API Response Status:", response.status);
-            console.log(
-              "Transtypecode API Response Headers:",
-              Object.fromEntries(response.headers.entries())
-            );
-
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error("Transtypecode API Error Response:", errorText);
-              throw new Error(
-                `HTTP error! status: ${response.status}, body: ${errorText}`
-              );
-            }
-
-            const data = await response.json();
+            const data = await getTransactionTypes();
             console.log("Transaction types from API:", data);
-            console.log("Transaction types data type:", typeof data);
-            console.log("Transaction types is array:", Array.isArray(data));
-            console.log(
-              "Transaction types length:",
-              Array.isArray(data) ? data.length : "N/A"
-            );
 
             if (Array.isArray(data)) {
-              console.log("Setting scenario with array data:", data);
-              setScenario(data);
+              console.log("Setting transaction types with array data:", data);
+              setTransactionTypes(data);
             } else if (data && typeof data === "object") {
               // If it's a single object, wrap it in an array
               console.log(
-                "Setting scenario with single object wrapped in array:",
+                "Setting transaction types with single object wrapped in array:",
                 [data]
               );
-              setScenario([data]);
+              setTransactionTypes([data]);
             } else {
               console.error("Unexpected data format:", data);
-              setScenario([]);
+              setTransactionTypes([]);
             }
           } catch (error) {
             console.error("Error fetching transaction types:", error);
-            console.error("Error details:", {
-              message: error.message,
-              stack: error.stack,
-            });
-            setScenario([]);
+            setTransactionTypes([]);
           }
         })(),
       ]).finally(() => setAllLoading(false));
@@ -655,107 +615,32 @@ export default function CreateInvoice() {
   // Handle editing when scenario data is loaded
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
-    const currentScenarioId = formData.scenarioId;
+    const currentTransctypeId = formData.transctypeId;
 
     if (
       isEditing &&
-      currentScenarioId &&
-      scenario.length > 0 &&
+      currentTransctypeId &&
+      transactionTypes.length > 0 &&
       !transactionTypeId
     ) {
       console.log(
-        "Editing mode detected with scenario data loaded, setting transactionTypeId for:",
-        currentScenarioId
+        "Editing mode detected with transaction types data loaded, setting transactionTypeId for:",
+        currentTransctypeId
       );
 
-      // Set transactionTypeId based on scenario
-      let newTransactionTypeId = null;
-
-      if (currentScenarioId === "SN016") {
-        newTransactionTypeId = "25";
-      } else if (currentScenarioId === "SN024") {
-        newTransactionTypeId = "139";
-      } else if (currentScenarioId === "SN002") {
-        newTransactionTypeId = "75";
-      } else if (currentScenarioId === "SN007") {
-        newTransactionTypeId = "80"; // Zero rated sale
-      } else {
-        // For other scenarios, try to find from scenario data
-        const selectedScenario = scenarioData.find(
-          (item) => item.id === currentScenarioId
-        );
-        if (selectedScenario) {
-          const saleType = selectedScenario.saleType || "";
-
-          // Find matching transaction type from API response
-          const normalizeStr = (str) =>
-            str?.toLowerCase().replace(/[^a-z0-9]/g, "");
-          const normalizedSaleType = normalizeStr(saleType);
-
-          // Stage 1: Exact match
-          let matchingApiRecord = scenario.find((item) => {
-            return (
-              item.transactioN_DESC &&
-              normalizeStr(item.transactioN_DESC) === normalizedSaleType
-            );
-          });
-
-          // Stage 2: Partial match (if exact match fails)
-          if (!matchingApiRecord) {
-            matchingApiRecord = scenario.find((item) => {
-              return (
-                item.transactioN_DESC &&
-                (normalizeStr(item.transactioN_DESC).includes(
-                  normalizedSaleType
-                ) ||
-                  normalizedSaleType.includes(
-                    normalizeStr(item.transactioN_DESC)
-                  ))
-              );
-            });
-          }
-
-          // Stage 3: Generic match for common patterns
-          if (!matchingApiRecord) {
-            const genericPatterns = {
-              "goods at standard rate": "75",
-              "goods at zero rate": "76",
-              "goods at reduced rate": "77",
-              "services at standard rate": "78",
-              "services at zero rate": "79",
-              "services at reduced rate": "80",
-            };
-
-            for (const [pattern, typeId] of Object.entries(genericPatterns)) {
-              if (normalizedSaleType.includes(pattern.replace(/\s+/g, ""))) {
-                matchingApiRecord = scenario.find(
-                  (item) => item.transactioN_TYPE_ID === typeId
-                );
-                if (matchingApiRecord) break;
-              }
-            }
-          }
-
-          if (matchingApiRecord) {
-            newTransactionTypeId = matchingApiRecord.transactioN_TYPE_ID;
-            console.log(
-              "Found matching transaction type for editing:",
-              matchingApiRecord
-            );
-          }
-        }
-      }
+      // Set transactionTypeId based on transctypeId
+      const newTransactionTypeId = currentTransctypeId;
 
       if (newTransactionTypeId) {
         localStorage.setItem("transactionTypeId", newTransactionTypeId);
         setTransactionTypeId(newTransactionTypeId);
         console.log(
-          "Set transactionTypeId for editing after scenario data loaded:",
+          "Set transactionTypeId for editing after transaction types data loaded:",
           newTransactionTypeId
         );
       }
     }
-  }, [scenario, formData.scenarioId, transactionTypeId]);
+  }, [transactionTypes, formData.transctypeId, transactionTypeId]);
 
   useEffect(() => {
     const fetchBuyers = async () => {
@@ -857,18 +742,16 @@ export default function CreateInvoice() {
         item.isSROItemEnabled = false;
         item.isValueSalesManual = false;
 
-        // Auto-set uoM to "Bill of lading" for scenario SN018 when rate contains "/bill"
-        if (prev.scenarioId === "SN018" && value.includes("/bill")) {
+        // Auto-set uoM to "Bill of lading" for transaction type when rate contains "/bill"
+        if (value.includes("/bill")) {
           item.uoM = "Bill of lading";
           console.log(
-            `Auto-setting uoM to "Bill of lading" for rate "${value}" in scenario SN018`
+            `Auto-setting uoM to "Bill of lading" for rate "${value}"`
           );
         }
-        if (prev.scenarioId === "SN019" && value.includes("/SqY")) {
+        if (value.includes("/SqY")) {
           item.uoM = "SqY";
-          console.log(
-            `Auto-setting uoM to "SqY" for rate "${value}" in scenario SN019`
-          );
+          console.log(`Auto-setting uoM to "SqY" for rate "${value}"`);
         }
       }
 
@@ -1137,142 +1020,39 @@ export default function CreateInvoice() {
     }
   };
 
-  const handleScenarioChange = (id) => {
-    const selectedScenario = scenarioData.find((item) => item.id === id);
+  const handleTransactionTypeChange = (transctypeId) => {
+    console.log("Selected transaction type ID:", transctypeId);
 
-    if (!selectedScenario) {
+    if (!transctypeId) {
       setFormData((prev) => ({
         ...prev,
-        scenarioId: id,
+        transctypeId: "",
       }));
       localStorage.removeItem("saleType");
-      // localStorage.removeItem("productDescription");
       setTransactionTypeId(null);
       return;
     }
 
-    // Set correct saleType and transactionTypeId
-    let saleType = selectedScenario.saleType || "";
-    let newTransactionTypeId = null;
+    // Find the selected transaction type from the API data
+    const selectedTransactionType = transactionTypes.find(
+      (item) => item.transactioN_TYPE_ID === transctypeId
+    );
 
-    // Special cases for specific scenarios
-    if (id === "SN016") {
-      saleType = "Processing/Conversion of Goods";
-      newTransactionTypeId = "25";
-    } else if (id === "SN024") {
-      saleType = "Goods as per SRO.297(|)/2023";
-      newTransactionTypeId = "139";
-    } else if (id === "SN002") {
-      newTransactionTypeId = "75";
-      saleType = "Goods at standard rate (default)";
-    } else if (id === "SN007") {
-      newTransactionTypeId = "80";
-      saleType = "Goods at zero-rate";
-      console.log("SN007 selected - setting transactionTypeId to 80");
-    } else {
-      // Find matching transaction type from API response using multi-stage matching
-      console.log("Available scenario data:", scenario);
-      console.log("Scenario data length:", scenario.length);
-
-      if (scenario && scenario.length > 0) {
-        // Log all transactioN_DESC values for debugging
-        console.log("All transactioN_DESC values from API:");
-        scenario.forEach((item, index) => {
-          console.log(`Item ${index}:`, {
-            transactioN_TYPE_ID: item.transactioN_TYPE_ID,
-            transactioN_DESC: item.transactioN_DESC,
-          });
-        });
-        const normalizeStr = (str) =>
-          str?.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-        const normalizedSaleType = normalizeStr(saleType);
-
-        // Stage 1: Exact match
-        let matchingApiRecord = scenario.find((item) => {
-          return (
-            item.transactioN_DESC &&
-            normalizeStr(item.transactioN_DESC) === normalizedSaleType
-          );
-        });
-
-        // Stage 2: Partial match (if exact match fails)
-        if (!matchingApiRecord) {
-          matchingApiRecord = scenario.find((item) => {
-            return (
-              item.transactioN_DESC &&
-              (normalizeStr(item.transactioN_DESC).includes(
-                normalizedSaleType
-              ) ||
-                normalizedSaleType.includes(
-                  normalizeStr(item.transactioN_DESC)
-                ))
-            );
-          });
-        }
-
-        // Stage 3: Generic match for common patterns
-        if (!matchingApiRecord) {
-          const genericPatterns = {
-            "goods at standard rate": "75",
-            "goods at zero rate": "76",
-            "goods at reduced rate": "77",
-            "services at standard rate": "78",
-            "services at zero rate": "79",
-            "services at reduced rate": "80",
-          };
-
-          for (const [pattern, typeId] of Object.entries(genericPatterns)) {
-            if (normalizedSaleType.includes(pattern.replace(/\s+/g, ""))) {
-              matchingApiRecord = scenario.find(
-                (item) => item.transactioN_TYPE_ID === typeId
-              );
-              if (matchingApiRecord) break;
-            }
-          }
-        }
-
-        // Stage 4: Fallback to default if no match found
-        if (!matchingApiRecord) {
-          console.warn(
-            `No matching transaction type found for saleType: ${saleType}`
-          );
-          // Try to find a default record
-          matchingApiRecord = scenario.find(
-            (item) =>
-              item.transactioN_TYPE_ID === "75" ||
-              item.transactioN_DESC?.toLowerCase().includes("default")
-          );
-        }
-
-        if (matchingApiRecord) {
-          newTransactionTypeId = matchingApiRecord.transactioN_TYPE_ID;
-          saleType = matchingApiRecord.transactioN_DESC;
-          console.log("Found matching transaction type:", matchingApiRecord);
-        } else {
-          console.error(
-            "No transaction type found even after all matching stages"
-          );
-        }
-      } else {
-        console.warn("No scenario data available for matching");
-      }
+    if (!selectedTransactionType) {
+      console.error("Selected transaction type not found in API data");
+      return;
     }
 
-    console.log("Selected scenario:", id);
+    const saleType = selectedTransactionType.transactioN_DESC || "";
+
+    console.log("Selected transaction type:", selectedTransactionType);
     console.log("Sale type:", saleType);
-    console.log("Transaction type ID:", newTransactionTypeId);
+    console.log("Transaction type ID:", transctypeId);
 
     // Update localStorage and state
     localStorage.setItem("saleType", saleType);
-    // localStorage.setItem("productDescription", selectedScenario.description);
-    if (newTransactionTypeId) {
-      localStorage.setItem("transactionTypeId", newTransactionTypeId);
-      setTransactionTypeId(newTransactionTypeId);
-    } else {
-      localStorage.removeItem("transactionTypeId");
-      setTransactionTypeId(null);
-    }
+    localStorage.setItem("transactionTypeId", transctypeId);
+    setTransactionTypeId(transctypeId);
 
     // Update form data
     setFormData((prev) => {
@@ -1281,7 +1061,7 @@ export default function CreateInvoice() {
         prev.items.length > 0
           ? prev.items.map((item) => ({
               ...item,
-              // Don't update product description with scenario description - keep existing or clear if no HS code
+              // Don't update product description - keep existing or clear if no HS code
               productDescription: item.hsCode ? item.productDescription : "",
               saleType: saleType,
               rate: isEditing ? item.rate : "", // Preserve rate when editing
@@ -1312,7 +1092,7 @@ export default function CreateInvoice() {
             ];
       return {
         ...prev,
-        scenarioId: id,
+        transctypeId: transctypeId,
         items,
       };
     });
@@ -1400,7 +1180,7 @@ export default function CreateInvoice() {
       const cleanedData = {
         ...formData,
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
-        scenario_id: formData.scenarioId,
+        transctypeId: formData.transctypeId,
         items: itemsToSave.map(
           (
             {
@@ -1418,18 +1198,10 @@ export default function CreateInvoice() {
             index
           ) => {
             let uoMValue = rest.uoM?.trim() || null;
-            if (
-              formData.scenarioId === "SN018" &&
-              rest.rate &&
-              rest.rate.includes("/bill")
-            ) {
+            if (rest.rate && rest.rate.includes("/bill")) {
               uoMValue = "Bill of lading";
             }
-            if (
-              formData.scenarioId === "SN019" &&
-              rest.rate &&
-              rest.rate.includes("/SqY")
-            ) {
+            if (rest.rate && rest.rate.includes("/SqY")) {
               uoMValue = "SqY";
             }
 
@@ -1548,7 +1320,7 @@ export default function CreateInvoice() {
       const cleanedData = {
         ...formData,
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
-        scenario_id: formData.scenarioId,
+        transctypeId: formData.transctypeId,
         items: itemsToSave.map(
           (
             {
@@ -1566,18 +1338,10 @@ export default function CreateInvoice() {
             index
           ) => {
             let uoMValue = rest.uoM?.trim() || null;
-            if (
-              formData.scenarioId === "SN018" &&
-              rest.rate &&
-              rest.rate.includes("/bill")
-            ) {
+            if (rest.rate && rest.rate.includes("/bill")) {
               uoMValue = "Bill of lading";
             }
-            if (
-              formData.scenarioId === "SN019" &&
-              rest.rate &&
-              rest.rate.includes("/SqY")
-            ) {
+            if (rest.rate && rest.rate.includes("/SqY")) {
               uoMValue = "SqY";
             }
 
@@ -1629,7 +1393,7 @@ export default function CreateInvoice() {
 
       // First, validate with FBR API
       const validateRes = await postData(
-        "di_data/v1/di/validateinvoicedata_sb",
+        "di_data/v1/di/validateinvoicedata",
         cleanedData,
         "sandbox"
       );
@@ -1829,7 +1593,7 @@ export default function CreateInvoice() {
           requiredFields: itemRequiredFields,
           billOfLadingUoM: item.billOfLadingUoM,
           rate: item.rate,
-          scenarioId: formData.scenarioId,
+          transctypeId: formData.transctypeId,
         });
 
         for (const { field, message } of itemRequiredFields) {
@@ -1879,27 +1643,17 @@ export default function CreateInvoice() {
             finalBillOfLadingUoM: rest.billOfLadingUoM?.trim() || null,
           });
 
-          // Special handling for uoM in scenario SN018 with rate containing "/bill"
+          // Special handling for uoM based on rate content
           let uoMValue = rest.uoM?.trim() || null;
-          if (
-            formData.scenarioId === "SN018" &&
-            rest.rate &&
-            rest.rate.includes("/bill")
-          ) {
+          if (rest.rate && rest.rate.includes("/bill")) {
             uoMValue = "Bill of lading";
             console.log(
-              `Forcing uoM to "Bill of lading" for scenario SN018 with rate "${rest.rate}"`
+              `Forcing uoM to "Bill of lading" for rate "${rest.rate}"`
             );
           }
-          if (
-            formData.scenarioId === "SN019" &&
-            rest.rate &&
-            rest.rate.includes("/SqY")
-          ) {
+          if (rest.rate && rest.rate.includes("/SqY")) {
             uoMValue = "SqY";
-            console.log(
-              `Forcing uoM to "SqY" for scenario SN019 with rate "${rest.rate}"`
-            );
+            console.log(`Forcing uoM to "SqY" for rate "${rest.rate}"`);
           }
 
           const baseItem = {
@@ -1942,7 +1696,7 @@ export default function CreateInvoice() {
       const cleanedData = {
         ...formData,
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
-        scenario_id: formData.scenarioId,
+        transctypeId: formData.transctypeId,
         items: cleanedItems,
       };
 
@@ -1958,7 +1712,7 @@ export default function CreateInvoice() {
       // STEP 1: Hit FBR API First
       console.log("Step 1: Calling FBR API to submit invoice data...");
       const fbrResponse = await postData(
-        "di_data/v1/di/postinvoicedata_sb",
+        "di_data/v1/di/postinvoicedata",
         cleanedData,
         "sandbox"
       );
@@ -2065,7 +1819,7 @@ export default function CreateInvoice() {
       const backendData = {
         ...formData, // Use original form data to preserve all fields
         invoiceDate: dayjs(formData.invoiceDate).format("YYYY-MM-DD"),
-        scenario_id: formData.scenarioId,
+        transctypeId: formData.transctypeId,
         items: cleanedItems, // Use cleaned items for consistency
         fbr_invoice_number: fbrInvoiceNumber,
         status: "posted", // Set status as posted since it's been submitted to FBR
@@ -2218,7 +1972,7 @@ export default function CreateInvoice() {
       buyerAddress: "",
       buyerRegistrationType: "",
       invoiceRefNo: "",
-      scenarioId: "",
+      transctypeId: "",
       items: [
         {
           hsCode: "",
@@ -2264,14 +2018,36 @@ export default function CreateInvoice() {
       <Box
         sx={{
           display: "flex",
-          justifyContent: "center",
+          flexDirection: "column",
           alignItems: "center",
-          height: "50vh",
+          justifyContent: "center",
+          minHeight: "60vh",
+          p: 3,
+          textAlign: "center",
         }}
       >
-        <Typography variant="h6" color="text.secondary">
+        <Alert
+          severity="warning"
+          sx={{
+            maxWidth: 500,
+            mb: 3,
+            "& .MuiAlert-message": {
+              fontSize: "1.1rem",
+              fontWeight: 500,
+            },
+          }}
+        >
           Please select a Company to continue
-        </Typography>
+        </Alert>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          onClick={() => navigate("/tenant-management")}
+          sx={{ mt: 2 }}
+        >
+          Select Company
+        </Button>
       </Box>
     );
   }
@@ -2537,41 +2313,6 @@ export default function CreateInvoice() {
             />
           </Box>
         </Box>
-        {/* Tenant Selection Status */}
-        {!selectedTenant && (
-          <Box
-            sx={{
-              mb: 2,
-              p: 2,
-              bgcolor: "warning.light",
-              borderRadius: 2,
-              color: "white",
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              ⚠ Please select a Company to populate seller information
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ opacity: 0.9, display: "block", mb: 1 }}
-            >
-              Go to Company Management to select a Company before creating an
-              invoice.
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => navigate("/tenant-management")}
-              sx={{
-                bgcolor: "white",
-                color: "warning.main",
-                "&:hover": { bgcolor: "grey.100" },
-              }}
-            >
-              Select Company
-            </Button>
-          </Box>
-        )}
 
         {/* Buyer Detail Section */}
         <Box
@@ -2639,13 +2380,13 @@ export default function CreateInvoice() {
             </Box>
             <Box>
               <FormControl fullWidth size="small">
-                <InputLabel id="scenarioId">Scenario</InputLabel>
+                <InputLabel id="transctypeId">Transaction Type</InputLabel>
                 <Select
-                  labelId="scenarioId"
-                  name="scenarioId"
-                  value={formData.scenarioId ?? ""}
-                  label="Scenario"
-                  onChange={(e) => handleScenarioChange(e.target.value)}
+                  labelId="transctypeId"
+                  name="transctypeId"
+                  value={formData.transctypeId ?? ""}
+                  label="Transaction Type"
+                  onChange={(e) => handleTransactionTypeChange(e.target.value)}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       "& fieldset": { borderColor: "#e5e7eb" },
@@ -2653,11 +2394,15 @@ export default function CreateInvoice() {
                   }}
                 >
                   <MenuItem value="">
-                    <em>Select a scenario</em>
+                    <em>Select a transaction type</em>
                   </MenuItem>
-                  {scenarioData.map((curElem) => (
-                    <MenuItem key={curElem.id} value={curElem.id}>
-                      {curElem.id} - {curElem.description}
+                  {transactionTypes.map((transactionType) => (
+                    <MenuItem
+                      key={transactionType.transactioN_TYPE_ID}
+                      value={transactionType.transactioN_TYPE_ID}
+                    >
+                      {transactionType.transactioN_TYPE_ID} -{" "}
+                      {transactionType.transactioN_DESC}
                     </MenuItem>
                   ))}
                 </Select>

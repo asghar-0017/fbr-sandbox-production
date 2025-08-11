@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 // Don't destructure sandBoxTestToken at import time, use it dynamically
 const { apiKey } = API_CONFIG;
 
-export const  postData = async (endpoint, data, environment = "sandbox") => {
+export const postData = async (endpoint, data, environment = "sandbox") => {
   // Get current token dynamically from context
   const token = API_CONFIG.getCurrentToken(environment);
 
@@ -39,12 +39,14 @@ export const  postData = async (endpoint, data, environment = "sandbox") => {
       hasValidationResponse: !!res.data.validationResponse,
       hasInvoiceNumber: !!res.data.invoiceNumber,
       hasSuccess: !!res.data.success,
-      responseKeys: Object.keys(res.data || {})
+      responseKeys: Object.keys(res.data || {}),
     });
 
     // Don't throw error for missing validationResponse - handle it gracefully
     if (!res.data.validationResponse) {
-      console.warn("FBR response missing validationResponse field, but continuing with response");
+      console.warn(
+        "FBR response missing validationResponse field, but continuing with response"
+      );
     }
     return res;
   } catch (error) {

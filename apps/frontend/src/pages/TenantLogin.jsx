@@ -1,28 +1,37 @@
-import React, { useState } from 'react';
-import { Box, Paper, TextField, Button, Typography, Divider, Stack, Alert } from '@mui/material';
-import { useTenant } from '../Context/TenantProvider';
+import React, { useState } from "react";
+import {
+  Box,
+  Paper,
+  TextField,
+  Button,
+  Typography,
+  Divider,
+  Stack,
+  Alert,
+} from "@mui/material";
+import { useTenant } from "../Context/TenantProvider";
 
 const TenantLogin = () => {
   const [formData, setFormData] = useState({
-    sellerNTNCNIC: '',
-    password: ''
+    sellerNTNCNIC: "",
+    password: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const { tenantLogin } = useTenant();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-              await tenantLogin(formData.sellerNTNCNIC, formData.password);
+      await tenantLogin(formData.sellerNTNCNIC, formData.password);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -34,23 +43,23 @@ const TenantLogin = () => {
     <Box
       className="professional-form"
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        p: 2
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        p: 2,
       }}
     >
       <Paper
         elevation={8}
         sx={{
           p: { xs: 2, sm: 3 },
-          width: { xs: '100%', sm: 360 },
+          width: { xs: "100%", sm: 360 },
           borderRadius: 4,
-          background: 'linear-gradient(135deg, #f6f9fc 0%, #e0e7ff 100%)',
-          boxShadow: '0 8px 32px rgba(31, 38, 135, 0.2)',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
+          background: "linear-gradient(135deg, #f6f9fc 0%, #e0e7ff 100%)",
+          boxShadow: "0 8px 32px rgba(31, 38, 135, 0.2)",
+          border: "1px solid rgba(255, 255, 255, 0.18)",
         }}
       >
         <Typography
@@ -59,16 +68,16 @@ const TenantLogin = () => {
           gutterBottom
           sx={{
             fontWeight: 900,
-            color: '#3f51b5',
+            color: "#3f51b5",
             mb: 3,
-            textShadow: '0 2px 8px #e3e3e3'
+            textShadow: "0 2px 8px #e3e3e3",
           }}
         >
           Tenant Login
         </Typography>
-        
-        <Divider sx={{ mb: 3, borderColor: '#3f51b5' }} />
-        
+
+        <Divider sx={{ mb: 3, borderColor: "#3f51b5" }} />
+
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
@@ -88,7 +97,7 @@ const TenantLogin = () => {
               color="primary"
               placeholder="Enter your NTN/CNIC"
             />
-            
+
             <TextField
               label="Password"
               name="password"
@@ -111,23 +120,23 @@ const TenantLogin = () => {
               disabled={loading}
               sx={{
                 fontWeight: 600,
-                fontSize: '13px',
+                fontSize: "13px",
                 py: 1,
                 height: 36,
                 borderRadius: 2,
-                boxShadow: '0 2px 8px rgba(63, 81, 181, 0.3)',
-                '&:hover': {
-                  boxShadow: '0 4px 12px rgba(63, 81, 181, 0.4)'
-                }
+                boxShadow: "0 2px 8px rgba(63, 81, 181, 0.3)",
+                "&:hover": {
+                  boxShadow: "0 4px 12px rgba(63, 81, 181, 0.4)",
+                },
               }}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? "Logging in..." : "Login"}
             </Button>
 
             <Typography
               variant="body2"
               align="center"
-              sx={{ color: '#666', mt: 2 }}
+              sx={{ color: "#666", mt: 2 }}
             >
               Use your NTN/CNIC as password for demo purposes
             </Typography>
@@ -138,4 +147,4 @@ const TenantLogin = () => {
   );
 };
 
-export default TenantLogin; 
+export default TenantLogin;

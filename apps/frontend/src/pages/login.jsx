@@ -7,17 +7,37 @@ import {
   Typography,
   Box,
   Avatar,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { useAuth } from "../Context/AuthProvider";
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleTogglePassword = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setShowPassword(!showPassword);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,9 +53,9 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row lg:h-screen">
       {/* Login Form Section */}
-      <div className="flex-1 bg-[#EDEDED] flex justify-center items-center p-4 lg:p-8 order-2 lg:order-1">
+      <div className="flex-1 bg-[#EDEDED] flex justify-center items-center p-4 lg:p-6 order-2 lg:order-1">
         <Paper
           elevation={6}
           sx={{
@@ -58,22 +78,22 @@ const Login = ({ onLogin }) => {
               mb: 2,
             }}
           >
-            <Typography 
-              variant="h4" 
-              component="p" 
-              sx={{ 
+            <Typography
+              variant="h4"
+              component="p"
+              sx={{
                 fontSize: { xs: "1.5rem", sm: "2rem" },
                 fontWeight: 600,
-                mb: 0.5
+                mb: 0.5,
               }}
             >
               Welcome
             </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
+            <Typography
+              variant="body2"
+              sx={{
                 color: "gray",
-                fontSize: { xs: "0.8rem", sm: "0.875rem" }
+                fontSize: { xs: "0.8rem", sm: "0.875rem" },
               }}
             >
               Enter your details here
@@ -98,7 +118,7 @@ const Login = ({ onLogin }) => {
             />
             <TextField
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               variant="outlined"
               size="small"
               fullWidth
@@ -111,10 +131,33 @@ const Login = ({ onLogin }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={handleTogglePassword}
+                      edge="end"
+                      disableRipple
+                      sx={{
+                        "&:focus": {
+                          outline: "none",
+                        },
+                      }}
+                    >
+                      {showPassword ? (
+                        <VisibilityOffIcon />
+                      ) : (
+                        <VisibilityIcon />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             {error && (
-              <Typography 
-                color="error" 
+              <Typography
+                color="error"
                 variant="body2"
                 sx={{ mt: 1, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
               >
@@ -166,9 +209,9 @@ const Login = ({ onLogin }) => {
       </div>
 
       {/* Branding Section */}
-      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-8 order-1 lg:order-2 bg-white min-h-[50vh] lg:min-h-screen">
+      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 order-1 lg:order-2 bg-white min-h-[50vh] lg:h-full lg:min-h-0">
         {/* Top Logos */}
-        <div className="w-full flex justify-between items-center mb-4 lg:mb-8 max-w-md lg:max-w-lg">
+        <div className="w-full flex justify-between items-center mb-4 lg:mb-6 max-w-md lg:max-w-lg">
           <img
             className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 object-contain"
             src="images/fbr-logo-1.png"
@@ -182,18 +225,18 @@ const Login = ({ onLogin }) => {
         </div>
 
         {/* Top Border Line */}
-        <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mb-4 lg:mb-8"></div>
+        <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mb-4 lg:mb-6"></div>
 
         {/* Main Image and Text */}
         <div className="flex flex-col justify-center items-center flex-1 max-w-md lg:max-w-lg">
           <div className="relative w-full flex justify-center mb-4">
             <img
               src="images/innovative.png"
-              className="w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 xl:w-96 xl:h-96 object-contain"
+              className="w-48 h-48 sm:w-64 sm:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80 object-contain"
               alt="Innovation Logo"
             />
           </div>
-          
+
           <Typography
             variant="h5"
             component="p"
@@ -211,7 +254,7 @@ const Login = ({ onLogin }) => {
         </div>
 
         {/* Bottom Border Line */}
-        <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mt-4 lg:mt-8"></div>
+        <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mt-4 lg:mt-6"></div>
       </div>
     </div>
   );

@@ -225,7 +225,7 @@ export const RegisteredUsers = () => {
                       <TableCell align="center">{user.email}</TableCell>
                       <TableCell align="center">{user.role}</TableCell>
                       <TableCell align="center">
-                        {user.sandBoxTestToken}
+                        {user.sandboxProductionToken}
                       </TableCell>
                       <TableCell align="center">
                         {user.sandBoxPublishToken}
@@ -490,8 +490,8 @@ const UpdateUserModal = ({
           <TextField
             variant="outlined"
             label="Sandbox Test Token"
-            name="sandBoxTestToken"
-            value={formData.sandBoxTestToken || ""}
+            name="sandboxProductionToken"
+            value={formData.sandboxProductionToken || ""}
             onChange={handleChange}
             fullWidth
             InputLabelProps={{

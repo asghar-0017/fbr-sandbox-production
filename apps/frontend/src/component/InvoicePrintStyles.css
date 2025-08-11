@@ -4,13 +4,13 @@
   body * {
     visibility: hidden;
   }
-  
+
   /* Show only the invoice modal content */
   .invoice-print-content,
   .invoice-print-content * {
     visibility: visible;
   }
-  
+
   /* Position the invoice content at the top of the page */
   .invoice-print-content {
     position: absolute;
@@ -22,38 +22,38 @@
     padding: 20px;
     background: white;
   }
-  
+
   /* Remove modal styling for print */
   .invoice-print-content .MuiModal-root {
     position: static !important;
     display: block !important;
   }
-  
+
   .invoice-print-content .MuiBox-root {
     box-shadow: none !important;
     border-radius: 0 !important;
     max-width: none !important;
     max-height: none !important;
   }
-  
+
   /* Hide modal header and buttons for print */
   .invoice-print-content .modal-header,
   .invoice-print-content .print-buttons {
     display: none !important;
   }
-  
+
   /* Ensure proper page breaks */
   .invoice-print-content {
     page-break-after: always;
   }
-  
+
   /* Table styles for print */
   .invoice-print-content table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
   }
-  
+
   .invoice-print-content th,
   .invoice-print-content td {
     border: 1px solid #157492;
@@ -61,90 +61,90 @@
     font-size: 11px;
     text-align: center;
   }
-  
+
   .invoice-print-content th {
     background-color: #2c7c93 !important;
     color: white !important;
     font-weight: bold;
   }
-  
-   /* Summary box for print */
- .invoice-print-content .summary-box {
-   margin-top: 20px;
-   width: 300px;
-   float: right;
-   background-color: #eee;
-   padding: 12px;
-   border: 1px solid #ccc;
-   text-align: right;
-   margin-left: 40px;
-   clear: right;
- }
-  
+
+  /* Summary box for print */
+  .invoice-print-content .summary-box {
+    margin-top: 20px;
+    width: 300px;
+    float: right;
+    background-color: #eee;
+    padding: 12px;
+    border: 1px solid #ccc;
+    text-align: right;
+    margin-left: 40px;
+    clear: right;
+  }
+
   /* Font settings for print */
   .invoice-print-content {
     font-family: Arial, sans-serif;
     font-size: 12px;
     color: #000;
   }
-  
+
   /* Header styling for print */
   .invoice-print-content .header {
     text-align: center;
     margin-bottom: 10px;
     position: relative;
   }
-  
+
   .invoice-print-content .logo {
     float: right;
     width: 130px;
     margin-top: -50px;
   }
-  
+
   /* Flex row styling for print */
   .invoice-print-content .flex-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
   }
-  
+
   /* Section styling for print */
   .invoice-print-content .section p {
     margin: 4px 0;
     font-size: 12px;
   }
-  
-   /* Total in words styling for print */
- .invoice-print-content .total-in-words {
-   margin-top: 40px;
-   font-weight: bold;
-   font-size: 12px;
-   clear: both;
-   white-space: pre-wrap;
-   position: relative;
-   bottom: 140px;
- }
-  
-   /* QR box styling for print */
- .invoice-print-content .qr-box {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   margin-top: 40px;
-   position: relative;
-   bottom: 7.5rem;
- }
-  
+
+  /* Total in words styling for print */
+  .invoice-print-content .total-in-words {
+    margin-top: 40px;
+    font-weight: bold;
+    font-size: 12px;
+    clear: both;
+    white-space: pre-wrap;
+    position: relative;
+    bottom: 140px;
+  }
+
+  /* QR box styling for print */
+  .invoice-print-content .qr-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    position: relative;
+    bottom: 7.5rem;
+  }
+
   .invoice-print-content .fbr-logo {
     width: 140px;
   }
-  
+
   .invoice-print-content .qr-image {
     width: 1in;
     height: 1in;
     object-fit: contain;
   }
-  
+
   /* Clear float for print */
   .invoice-print-content .clear {
     clear: both;
@@ -201,41 +201,41 @@
   font-weight: bold;
 }
 
- .invoice-view-modal .summary-box {
-   margin-top: 20px;
-   width: 300px;
-   float: right;
-   background-color: #eee;
-   padding: 12px;
-   border: 1px solid #ccc;
-   text-align: right;
-   margin-left: 40px;
-   clear: right;
- }
+.invoice-view-modal .summary-box {
+  margin-top: 20px;
+  width: 300px;
+  float: right;
+  background-color: #eee;
+  padding: 12px;
+  border: 1px solid #ccc;
+  text-align: right;
+  margin-left: 40px;
+  clear: right;
+}
 
 .invoice-view-modal .summary-box p {
   margin: 4px 0;
   font-size: 12px;
 }
 
- .invoice-view-modal .total-in-words {
-   margin-top: 40px;
-   font-weight: bold;
-   font-size: 12px;
-   clear: both;
-   white-space: pre-wrap;
-   position: relative;
-   bottom: 140px;
- }
+.invoice-view-modal .total-in-words {
+  margin-top: 40px;
+  font-weight: bold;
+  font-size: 12px;
+  clear: both;
+  white-space: pre-wrap;
+  position: relative;
+  bottom: 140px;
+}
 
- .invoice-view-modal .qr-box {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   margin-top: 40px;
-   position: relative;
-   bottom: 7.5rem;
- }
+.invoice-view-modal .qr-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
+  position: relative;
+  bottom: 7.5rem;
+}
 
 .invoice-view-modal .fbr-logo {
   width: 140px;
@@ -254,4 +254,4 @@
 
 .invoice-view-modal .clear {
   clear: both;
-} 
+}

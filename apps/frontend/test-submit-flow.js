@@ -72,7 +72,7 @@ const testSubmitFlow = async () => {
   try {
     // Step 1: FBR API call
     console.log('\n📋 Step 1: FBR API Call');
-    console.log('   - Endpoint: POST https://gw.fbr.gov.pk/dist/v1/di_data/v1/di/postinvoicedata_sb');
+    console.log('   - Endpoint: POST https://gw.fbr.gov.pk/dist/v1/di_data/v1/di/postinvoicedata');
     console.log('   - Status:', mockFBRResponse.status);
     console.log('   - Invoice Number:', mockFBRResponse.data.invoiceNumber);
     

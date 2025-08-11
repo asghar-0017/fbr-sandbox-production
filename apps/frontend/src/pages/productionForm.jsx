@@ -574,24 +574,30 @@ export default function ProductionFoam() {
       );
 
       // Handle different FBR response structures
-      const hasValidationResponse = validateRes.data && validateRes.data.validationResponse;
-      const isValidationSuccess = validateRes.status === 200 && (
-        hasValidationResponse ? validateRes.data.validationResponse.statusCode === "00" : true
-      );
+      const hasValidationResponse =
+        validateRes.data && validateRes.data.validationResponse;
+      const isValidationSuccess =
+        validateRes.status === 200 &&
+        (hasValidationResponse
+          ? validateRes.data.validationResponse.statusCode === "00"
+          : true);
 
       if (isValidationSuccess) {
         try {
           const postRes = await postData(
-            "di_data/v1/di/postinvoicedata_sb",
+            "di_data/v1/di/postinvoicedata",
             cleanedData,
             "production"
           );
           console.log("Post Invoice Response:", postRes);
           // Handle different FBR response structures for post
-          const hasPostValidationResponse = postRes.data && postRes.data.validationResponse;
-          const isPostSuccess = postRes.status === 200 && (
-            hasPostValidationResponse ? postRes.data.validationResponse.statusCode === "00" : true
-          );
+          const hasPostValidationResponse =
+            postRes.data && postRes.data.validationResponse;
+          const isPostSuccess =
+            postRes.status === 200 &&
+            (hasPostValidationResponse
+              ? postRes.data.validationResponse.statusCode === "00"
+              : true);
 
           if (isPostSuccess) {
             const invoiceNumber = postRes.data.invoiceNumber;
@@ -617,10 +623,12 @@ export default function ProductionFoam() {
             setIsPrintable(true);
           } else {
             // Handle different error response structures
-            const postErrorMessage = hasPostValidationResponse 
-              ? postRes.data.validationResponse.error 
-              : postRes.data.error || postRes.data.message || "Invoice submission failed.";
-            
+            const postErrorMessage = hasPostValidationResponse
+              ? postRes.data.validationResponse.error
+              : postRes.data.error ||
+                postRes.data.message ||
+                "Invoice submission failed.";
+
             Swal.fire({
               icon: "error",
               title: "Error",
@@ -636,11 +644,12 @@ export default function ProductionFoam() {
           });
           // Handle different error response structures
           const postErrorResponse = postError.response?.data;
-          const postErrorDetails = postErrorResponse?.validationResponse?.error || 
-                                  postErrorResponse?.error || 
-                                  postErrorResponse?.message || 
-                                  postError.message;
-          
+          const postErrorDetails =
+            postErrorResponse?.validationResponse?.error ||
+            postErrorResponse?.error ||
+            postErrorResponse?.message ||
+            postError.message;
+
           Swal.fire({
             icon: "error",
             title: "Error",
@@ -650,10 +659,12 @@ export default function ProductionFoam() {
         }
       } else {
         // Handle different error response structures
-        const validationErrorMessage = hasValidationResponse 
-          ? validateRes.data.validationResponse.error 
-          : validateRes.data.error || validateRes.data.message || "Invoice validation failed.";
-        
+        const validationErrorMessage = hasValidationResponse
+          ? validateRes.data.validationResponse.error
+          : validateRes.data.error ||
+            validateRes.data.message ||
+            "Invoice validation failed.";
+
         Swal.fire({
           icon: "error",
           title: "Error",

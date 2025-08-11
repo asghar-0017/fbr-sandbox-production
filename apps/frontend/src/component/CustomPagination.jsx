@@ -1,17 +1,17 @@
-import React from 'react';
-import { Box, IconButton, Button, Typography } from '@mui/material';
-import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
+import React from "react";
+import { Box, IconButton, Button, Typography } from "@mui/material";
+import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import FirstPageIcon from "@mui/icons-material/FirstPage";
+import LastPageIcon from "@mui/icons-material/LastPage";
 
-const CustomPagination = ({ 
-  count, 
-  page, 
-  onChange, 
-  showFirstButton = true, 
+const CustomPagination = ({
+  count,
+  page,
+  onChange,
+  showFirstButton = true,
   showLastButton = true,
-  size = "small"
+  size = "small",
 }) => {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= count) {
@@ -22,7 +22,7 @@ const CustomPagination = ({
   const renderPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (count <= maxVisiblePages) {
       // Show all pages if total is 5 or less
       for (let i = 1; i <= count; i++) {
@@ -37,12 +37,12 @@ const CustomPagination = ({
               height: 32,
               mx: 0.5,
               ...(page === i && {
-                backgroundColor: '#1976d2',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: '#1565c0',
-                }
-              })
+                backgroundColor: "#1976d2",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "#1565c0",
+                },
+              }),
             }}
           >
             {i}
@@ -65,12 +65,12 @@ const CustomPagination = ({
                 height: 32,
                 mx: 0.5,
                 ...(page === i && {
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  }
-                })
+                  backgroundColor: "#1976d2",
+                  color: "white",
+                  "&:hover": {
+                    backgroundColor: "#1565c0",
+                  },
+                }),
               }}
             >
               {i}
@@ -78,7 +78,7 @@ const CustomPagination = ({
           );
         }
         pages.push(
-          <Typography key="ellipsis1" sx={{ mx: 1, color: 'text.secondary' }}>
+          <Typography key="ellipsis1" sx={{ mx: 1, color: "text.secondary" }}>
             ...
           </Typography>
         );
@@ -107,7 +107,7 @@ const CustomPagination = ({
           </Button>
         );
         pages.push(
-          <Typography key="ellipsis2" sx={{ mx: 1, color: 'text.secondary' }}>
+          <Typography key="ellipsis2" sx={{ mx: 1, color: "text.secondary" }}>
             ...
           </Typography>
         );
@@ -123,12 +123,12 @@ const CustomPagination = ({
                 height: 32,
                 mx: 0.5,
                 ...(page === i && {
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  }
-                })
+                  backgroundColor: "#1976d2",
+                  color: "white",
+                  "&:hover": {
+                    backgroundColor: "#1565c0",
+                  },
+                }),
               }}
             >
               {i}
@@ -149,7 +149,7 @@ const CustomPagination = ({
           </Button>
         );
         pages.push(
-          <Typography key="ellipsis3" sx={{ mx: 1, color: 'text.secondary' }}>
+          <Typography key="ellipsis3" sx={{ mx: 1, color: "text.secondary" }}>
             ...
           </Typography>
         );
@@ -163,18 +163,18 @@ const CustomPagination = ({
               minWidth: 32,
               height: 32,
               mx: 0.5,
-              backgroundColor: '#1976d2',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: '#1565c0',
-              }
+              backgroundColor: "#1976d2",
+              color: "white",
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
             }}
           >
             {page}
           </Button>
         );
         pages.push(
-          <Typography key="ellipsis4" sx={{ mx: 1, color: 'text.secondary' }}>
+          <Typography key="ellipsis4" sx={{ mx: 1, color: "text.secondary" }}>
             ...
           </Typography>
         );
@@ -191,12 +191,12 @@ const CustomPagination = ({
         );
       }
     }
-    
+
     return pages;
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       {showFirstButton && (
         <IconButton
           onClick={() => handlePageChange(1)}
@@ -206,7 +206,7 @@ const CustomPagination = ({
           <FirstPageIcon />
         </IconButton>
       )}
-      
+
       <IconButton
         onClick={() => handlePageChange(page - 1)}
         disabled={page === 1}
@@ -214,9 +214,9 @@ const CustomPagination = ({
       >
         <NavigateBeforeIcon />
       </IconButton>
-      
+
       {renderPageNumbers()}
-      
+
       <IconButton
         onClick={() => handlePageChange(page + 1)}
         disabled={page === count}
@@ -224,7 +224,7 @@ const CustomPagination = ({
       >
         <NavigateNextIcon />
       </IconButton>
-      
+
       {showLastButton && (
         <IconButton
           onClick={() => handlePageChange(count)}
@@ -238,4 +238,4 @@ const CustomPagination = ({
   );
 };
 
-export default CustomPagination; 
+export default CustomPagination;

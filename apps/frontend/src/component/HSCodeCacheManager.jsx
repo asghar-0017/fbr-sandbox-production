@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -8,10 +8,10 @@ import {
   Chip,
   Alert,
   CircularProgress,
-  Divider
-} from '@mui/material';
-import { Refresh, Clear, Info } from '@mui/icons-material';
-import hsCodeCache from '../utils/hsCodeCache';
+  Divider,
+} from "@mui/material";
+import { Refresh, Clear, Info } from "@mui/icons-material";
+import hsCodeCache from "../utils/hsCodeCache";
 
 const HSCodeCacheManager = ({ environment = "sandbox" }) => {
   const [cacheStatus, setCacheStatus] = useState(null);
@@ -32,18 +32,18 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
   const handleRefreshCache = async () => {
     setLoading(true);
     setMessage(null);
-    
+
     try {
       await hsCodeCache.refreshCache(environment);
       setMessage({
-        type: 'success',
-        text: 'Cache refreshed successfully!'
+        type: "success",
+        text: "Cache refreshed successfully!",
       });
       loadCacheStatus();
     } catch (error) {
       setMessage({
-        type: 'error',
-        text: `Failed to refresh cache: ${error.message}`
+        type: "error",
+        text: `Failed to refresh cache: ${error.message}`,
       });
     } finally {
       setLoading(false);
@@ -54,15 +54,15 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
   const handleClearCache = () => {
     hsCodeCache.clearCache();
     setMessage({
-      type: 'info',
-      text: 'Cache cleared successfully!'
+      type: "info",
+      text: "Cache cleared successfully!",
     });
     loadCacheStatus();
   };
 
   if (!cacheStatus) {
     return (
-      <Card sx={{ maxWidth: 600, mx: 'auto', mt: 2 }}>
+      <Card sx={{ maxWidth: 600, mx: "auto", mt: 2 }}>
         <CardContent>
           <CircularProgress size={20} />
           <Typography variant="body2" sx={{ ml: 1 }}>
@@ -74,13 +74,11 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
   }
 
   return (
-    <Card sx={{ maxWidth: 600, mx: 'auto', mt: 2 }}>
+    <Card sx={{ maxWidth: 600, mx: "auto", mt: 2 }}>
       <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
           <Info sx={{ mr: 1 }} />
-          <Typography variant="h6">
-            HS Code Cache Manager
-          </Typography>
+          <Typography variant="h6">HS Code Cache Manager</Typography>
         </Box>
 
         {message && (
@@ -93,7 +91,7 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
           <Typography variant="subtitle2" gutterBottom>
             Cache Status
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             <Chip
               label={`${cacheStatus.cacheSize} codes cached`}
               color={cacheStatus.hasCache ? "primary" : "default"}
@@ -125,7 +123,7 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
 
         <Divider sx={{ my: 2 }} />
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
             startIcon={loading ? <CircularProgress size={16} /> : <Refresh />}
@@ -147,7 +145,10 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
           </Button>
         </Box>
 
-        <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'text.secondary' }}>
+        <Typography
+          variant="caption"
+          sx={{ display: "block", mt: 2, color: "text.secondary" }}
+        >
           Environment: {environment}
         </Typography>
       </CardContent>
@@ -155,4 +156,4 @@ const HSCodeCacheManager = ({ environment = "sandbox" }) => {
   );
 };
 
-export default HSCodeCacheManager; 
+export default HSCodeCacheManager;

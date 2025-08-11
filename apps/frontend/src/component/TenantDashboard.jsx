@@ -167,7 +167,42 @@ const TenantDashboard = () => {
   };
 
   if (!selectedTenant) {
-    return null;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "60vh",
+          p: 3,
+          textAlign: "center",
+        }}
+      >
+        <Alert
+          severity="warning"
+          sx={{
+            maxWidth: 500,
+            mb: 3,
+            "& .MuiAlert-message": {
+              fontSize: "1.1rem",
+              fontWeight: 500,
+            },
+          }}
+        >
+          Please select a Company to continue
+        </Alert>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          onClick={() => navigate("/tenant-management")}
+          sx={{ mt: 2 }}
+        >
+          Select Company
+        </Button>
+      </Box>
+    );
   }
 
   // Derive pagination for recent invoices (client-side)

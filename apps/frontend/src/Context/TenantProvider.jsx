@@ -15,58 +15,58 @@ export const TenantProvider = ({ children }) => {
   const tenantLogin = async (sellerNtnCnic, password) => {
     try {
       setTenantLoading(true);
-      
-      const response = await api.post('/tenant-auth/login', {
+
+      const response = await api.post("/tenant-auth/login", {
         sellerNTNCNIC: sellerNtnCnic,
-        password
+        password,
       });
 
       if (response.data.success) {
         const { token, tenant: tenantData } = response.data.data;
-        
+
         // Store tenant authentication data
-        localStorage.setItem('tenantToken', token);
-        localStorage.setItem('tenantId', tenantData.tenant_id);
-        localStorage.setItem('tenantData', JSON.stringify(tenantData));
-        
+        localStorage.setItem("tenantToken", token);
+        localStorage.setItem("tenantId", tenantData.tenant_id);
+        localStorage.setItem("tenantData", JSON.stringify(tenantData));
+
         setTenant(tenantData);
         setIsTenantAuthenticated(true);
-        
+
         Swal.fire({
-          icon: 'success',
-          title: 'Login Successful!',
+          icon: "success",
+          title: "Login Successful!",
           text: `Welcome ${tenantData.sellerBusinessName}`,
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
         });
 
         navigate("/buyers");
-        
+
         // Reload the screen after successful tenant login
         setTimeout(() => {
           window.location.reload();
         }, 100);
-        
+
         return true;
       }
-      
-      throw new Error('Login failed');
+
+      throw new Error("Login failed");
     } catch (error) {
-      console.error('Company login error:', error);
-      
-      let errorMessage = 'Login failed. Please try again.';
-      
+      console.error("Company login error:", error);
+
+      let errorMessage = "Login failed. Please try again.";
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       Swal.fire({
-        icon: 'error',
-        title: 'Login Failed',
+        icon: "error",
+        title: "Login Failed",
         text: errorMessage,
-        confirmButtonText: 'OK'
+        confirmButtonText: "OK",
       });
-      
+
       throw new Error(errorMessage);
     } finally {
       setTenantLoading(false);
@@ -75,23 +75,23 @@ export const TenantProvider = ({ children }) => {
 
   const tenantLogout = () => {
     // Clear tenant data
-    localStorage.removeItem('tenantToken');
-    localStorage.removeItem('tenantId');
-    localStorage.removeItem('tenantData');
-    
+    localStorage.removeItem("tenantToken");
+    localStorage.removeItem("tenantId");
+    localStorage.removeItem("tenantData");
+
     setIsTenantAuthenticated(false);
     setTenant(null);
-    
+
     Swal.fire({
-      icon: 'success',
-      title: 'Logged Out',
-      text: 'You have been successfully logged out',
+      icon: "success",
+      title: "Logged Out",
+      text: "You have been successfully logged out",
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     });
-    
+
     navigate("/tenant-login");
-    
+
     // Reload the screen after tenant logout
     setTimeout(() => {
       window.location.reload();
@@ -100,9 +100,9 @@ export const TenantProvider = ({ children }) => {
 
   const verifyTenantToken = async () => {
     try {
-      const token = localStorage.getItem('tenantToken');
-      const tenantData = localStorage.getItem('tenantData');
-      
+      const token = localStorage.getItem("tenantToken");
+      const tenantData = localStorage.getItem("tenantData");
+
       if (!token || !tenantData) {
         setIsTenantAuthenticated(false);
         setTenant(null);
@@ -110,7 +110,7 @@ export const TenantProvider = ({ children }) => {
         return false;
       }
 
-      const response = await api.get('/tenant-auth/verify-token');
+      const response = await api.get("/tenant-auth/verify-token");
 
       if (response.data.success) {
         const tenant = JSON.parse(tenantData);
@@ -119,18 +119,18 @@ export const TenantProvider = ({ children }) => {
         return true;
       } else {
         // Token is invalid
-        localStorage.removeItem('tenantToken');
-        localStorage.removeItem('tenantId');
-        localStorage.removeItem('tenantData');
+        localStorage.removeItem("tenantToken");
+        localStorage.removeItem("tenantId");
+        localStorage.removeItem("tenantData");
         setIsTenantAuthenticated(false);
         setTenant(null);
         return false;
       }
     } catch (error) {
-      console.error('Tenant token verification error:', error);
-      localStorage.removeItem('tenantToken');
-      localStorage.removeItem('tenantId');
-      localStorage.removeItem('tenantData');
+      console.error("Tenant token verification error:", error);
+      localStorage.removeItem("tenantToken");
+      localStorage.removeItem("tenantId");
+      localStorage.removeItem("tenantData");
       setIsTenantAuthenticated(false);
       setTenant(null);
       return false;
@@ -141,19 +141,19 @@ export const TenantProvider = ({ children }) => {
     const initializeTenantAuth = async () => {
       try {
         setTenantLoading(true);
-        
-        const storedTenant = localStorage.getItem('tenantData');
-        const token = localStorage.getItem('tenantToken');
-        
+
+        const storedTenant = localStorage.getItem("tenantData");
+        const token = localStorage.getItem("tenantToken");
+
         if (token && storedTenant) {
           // Verify token with server
           const isValid = await verifyTenantToken();
-          
+
           if (!isValid) {
             // Token is invalid, clear everything
-            localStorage.removeItem('tenantToken');
-            localStorage.removeItem('tenantId');
-            localStorage.removeItem('tenantData');
+            localStorage.removeItem("tenantToken");
+            localStorage.removeItem("tenantId");
+            localStorage.removeItem("tenantData");
             setIsTenantAuthenticated(false);
             setTenant(null);
           }
@@ -163,10 +163,10 @@ export const TenantProvider = ({ children }) => {
           setTenant(null);
         }
       } catch (error) {
-        console.error('Company auth initialization error:', error);
-        localStorage.removeItem('tenantToken');
-        localStorage.removeItem('tenantId');
-        localStorage.removeItem('tenantData');
+        console.error("Company auth initialization error:", error);
+        localStorage.removeItem("tenantToken");
+        localStorage.removeItem("tenantId");
+        localStorage.removeItem("tenantData");
         setIsTenantAuthenticated(false);
         setTenant(null);
       } finally {
@@ -179,13 +179,13 @@ export const TenantProvider = ({ children }) => {
 
   return (
     <TenantContext.Provider
-      value={{ 
-        isTenantAuthenticated, 
+      value={{
+        isTenantAuthenticated,
         tenant,
-        tenantLogin, 
-        tenantLogout, 
+        tenantLogin,
+        tenantLogout,
         tenantLoading,
-        verifyTenantToken
+        verifyTenantToken,
       }}
     >
       {children}
@@ -193,4 +193,4 @@ export const TenantProvider = ({ children }) => {
   );
 };
 
-export const useTenant = () => useContext(TenantContext); 
+export const useTenant = () => useContext(TenantContext);

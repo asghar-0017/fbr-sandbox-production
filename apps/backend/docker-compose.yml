@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  mysql-container:
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fbr_master
+    ports:
+      - "3307:3306"  # Host port 3307, container port 3306
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8080:8080"  # Access Adminer via http://localhost:8080

@@ -1,0 +1,197 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Professional Form Styling - Smaller Inputs and Buttons */
+.professional-form .MuiTextField-root {
+  margin-bottom: 12px;
+}
+
+.professional-form .MuiTextField-root .MuiInputBase-root {
+  height: 40px;
+  font-size: 14px;
+}
+
+.professional-form .MuiTextField-root .MuiInputLabel-root {
+  font-size: 13px;
+  transform: translate(14px, 12px) scale(1);
+}
+
+.professional-form .MuiTextField-root .MuiInputLabel-root.Mui-focused,
+.professional-form .MuiTextField-root .MuiInputLabel-root.MuiFormLabel-filled {
+  transform: translate(14px, -6px) scale(0.75);
+}
+
+.professional-form .MuiTextField-root .MuiInputBase-input {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.professional-form .MuiFormControl-root {
+  margin-bottom: 12px;
+}
+
+.professional-form .MuiFormControl-root .MuiInputBase-root {
+  height: 40px;
+  font-size: 14px;
+}
+
+.professional-form .MuiFormControl-root .MuiInputLabel-root {
+  font-size: 13px;
+  transform: translate(14px, 12px) scale(1);
+}
+
+.professional-form .MuiFormControl-root .MuiInputLabel-root.Mui-focused,
+.professional-form
+  .MuiFormControl-root
+  .MuiInputLabel-root.MuiFormLabel-filled {
+  transform: translate(14px, -6px) scale(0.75);
+}
+
+.professional-form .MuiFormControl-root .MuiSelect-select {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+/* Professional Button Styling */
+.professional-form .MuiButton-root {
+  height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  min-width: 80px;
+}
+
+.professional-form .MuiButton-contained {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.professional-form .MuiButton-outlined {
+  border-width: 1.5px;
+}
+
+/* Smaller spacing between form elements */
+.professional-form .MuiStack-root {
+  gap: 12px !important;
+}
+
+.professional-form .MuiBox-root {
+  gap: 12px;
+}
+
+/* Compact form sections */
+.professional-form .form-section {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Professional input focus states */
+.professional-form
+  .MuiTextField-root
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-width: 1.5px;
+  border-color: #1976d2;
+}
+
+.professional-form
+  .MuiFormControl-root
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-width: 1.5px;
+  border-color: #1976d2;
+}
+
+/* Compact grid layout */
+.professional-form .compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Professional typography */
+.professional-form .section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Compact button groups */
+.professional-form .button-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* Professional autocomplete styling */
+.professional-form .MuiAutocomplete-root .MuiInputBase-root {
+  height: 40px;
+  font-size: 14px;
+}
+
+.professional-form .MuiAutocomplete-root .MuiInputBase-input {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+/* Professional date picker styling */
+.professional-form .MuiDatePicker-root .MuiInputBase-root {
+  height: 40px;
+  font-size: 14px;
+}
+
+.professional-form .MuiDatePicker-root .MuiInputBase-input {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+

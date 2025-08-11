@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@100;200;300;400;500;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Kumbh Sans", sans-serif !important;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  font-family: "Kumbh Sans", sans-serif !important;
+}
+
+/* Override MUI components specifically with !important */
+.MuiTypography-root,
+.MuiListItemText-primary,
+.MuiChip-label,
+.MuiButton-root,
+.MuiTextField-root,
+.MuiInputBase-root,
+.MuiFormLabel-root,
+.MuiSelect-select,
+.MuiMenuItem-root,
+.MuiAutocomplete-input,
+.MuiInputLabel-root,
+.MuiListItemText-root,
+.MuiListItemText-primary,
+.MuiListItemText-secondary {
+  font-family: "Kumbh Sans", sans-serif !important;
+}
+
+/* Force override for all MUI text elements */
+[class*="Mui"] {
+  font-family: "Kumbh Sans", sans-serif !important;
+}
+
+/* Specific override for sidebar text */
+.MuiListItemText-primary {
+  font-family: "Kumbh Sans", sans-serif !important;
+  font-weight: 700 !important;
+}
+
+/* Override for all typography elements */
+.MuiTypography-root {
+  font-family: "Kumbh Sans", sans-serif !important;
+}

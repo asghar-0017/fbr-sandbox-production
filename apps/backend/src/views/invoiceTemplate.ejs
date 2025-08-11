@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Sales Tax Invoice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      margin: 20px;
+      color: #000;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .logo {
+      float: right;
+      width: 130px;
+      margin-top: -50px;
+    }
+
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section p {
+      margin: 4px 0;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #157492;
+      padding: 6px 8px;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #2c7c93;
+      color: white;
+      font-weight: bold;
+
+    }
+
+    .summary-box {
+      margin-top: 20px;
+      width: 300px;
+      float: right;
+      background-color: #eee;
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: right;
+      margin-left: 40px;
+    }
+
+    .summary-box p {
+      margin: 4px 0;
+      font-size: 12px;
+    }
+
+    .total-in-words {
+      margin-top: 40px;
+      font-weight: bold;
+      font-size: 12px;
+      clear: both;
+      white-space: pre-wrap;
+      /* Enable wrapping for long text */
+    }
+
+    .qr-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+    }
+
+    .fbr-logo {
+      width: 140px;
+    }
+
+    .qr-box img {
+      height: 100px;
+      object-fit: contain;
+    }
+
+    .qr-image {
+      width: 1in;
+      height: 1in;
+      object-fit: contain;
+    }
+
+    .clear {
+      clear: both;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h2>Sales Tax Invoice</h2>
+    <img class="logo" src="data:image/png;base64,<%= fbrLogoBase64 %>" alt="Company Logo" />
+  </div>
+
+  <div class="flex-row">
+    <div class="invoice-info">
+      <p><strong>Invoice #:</strong>
+        <%= invoice.invoice_number %>
+      </p>
+      <% if (invoice.fbr_invoice_number && invoice.fbr_invoice_number !== invoice.invoice_number) { %>
+        <p style="font-size: 10px; color: #666; font-style: italic;"><strong>FBR #:</strong>
+          <%= invoice.fbr_invoice_number %>
+        </p>
+      <% } %>
+    </div>
+    <div class="invoice-info">
+      <p><strong>Date:</strong>
+        <%= invoice.invoiceDate %>
+      </p>
+    </div>
+  </div>
+
+  <div class="flex-row">
+    <div class="buyer-info">
+      <p><strong>Buyer:</strong></p>
+      <p>
+        <%= invoice.buyerBusinessName %>
+      </p>
+      <p>
+        <%= invoice.buyerAddress %>
+      </p>
+      <p>REGION: <%= invoice.buyerProvince %>
+      </p>
+      <p>NTN: <%= invoice.buyerNTNCNIC %>
+      </p>
+      <p>TYPE: <%= invoice.buyerRegistrationType %>
+      </p>
+    </div>
+    <div class="seller-info">
+      <p><strong>Seller:</strong></p>
+      <p>
+        <%= invoice.sellerBusinessName %>
+      </p>
+      <p>
+        <%= invoice.sellerAddress %>
+      </p>
+      <p>NTN: <%= invoice.sellerNTNCNIC %>
+      </p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>SR No.</th>
+        <th>HS Code</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Amount</th>
+        <th>Rate</th>
+        <th>Sales Tax</th>
+        <th>Extra Tax</th>
+        <th>Further Tax</th>
+        <th>FED</th>
+        <th>Discount (%)</th>
+        <th>Sales Tax Withheld</th>
+        <th>Total (incl. Tax)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% invoice.items.forEach((item, idx)=> { %>
+        <tr>
+          <td>
+            <%= idx + 1 %>
+          </td>
+          <td>
+            <%= item.hsCode %>
+          </td>
+          <td>
+            <%= item.quantity %>
+          </td>
+          <td>
+            <%= item.unitPrice %>
+          </td>
+          <td>
+            <%= (parseFloat(item.valueSalesExcludingST) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= item.rate %>
+          </td>
+          <td>
+            <%= (parseFloat(item.salesTaxApplicable) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.extraTax) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.furtherTax) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.fedPayable) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.discount) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.salesTaxWithheldAtSource) || 0).toFixed(2) %>
+          </td>
+          <td>
+            <%= (parseFloat(item.totalValues) || 0).toFixed(2) %>
+          </td> <!-- Just use totalValues -->
+
+        </tr>
+        <% }); %>
+    </tbody>
+  </table>
+
+  <% const subTotal=invoice.items.reduce((sum, i)=> sum + parseFloat(i.valueSalesExcludingST || 0), 0);
+    const gst = invoice.items.reduce((sum, i) => sum + parseFloat(i.salesTaxApplicable || 0), 0);
+    const further = invoice.items.reduce((sum, i) => sum + parseFloat(i.furtherTax || 0), 0);
+    const extra = invoice.items.reduce((sum, i) => sum + parseFloat(i.extraTax || 0), 0);
+    const fed = invoice.items.reduce((sum, i) => sum + parseFloat(i.fedPayable || 0), 0);
+    const dis = invoice.items.reduce((sum, i) => sum + parseFloat(i.discount || 0), 0);
+    const withheld = invoice.items.reduce((sum, i) => sum + parseFloat(i.salesTaxWithheldAtSource || 0), 0);
+  const grandTotal = invoice.items.reduce((sum, i) => sum + parseFloat(i.totalValues || 0), 0);
+    %>
+
+    <div class="summary-box">
+      <p>Sub Total (Excl. Tax): <%= subTotal.toFixed(2) %>
+      </p>
+      <p>Sales Tax (GST): <%= gst.toFixed(2) %>
+      </p>
+      <p>Further Tax: <%= further.toFixed(2) %>
+      </p>
+      <p>Extra Tax: <%= extra.toFixed(2) %>
+      </p>
+      <p>fedPayable: <%= fed.toFixed(2) %>
+      </p>
+      <p>Discount: <%= dis.toFixed(2) %>
+      </p>
+      <p>Sales Tax Withheld: <%= withheld.toFixed(2) %>
+      </p>
+      <p><strong>Grand Total (Incl. All Taxes): RS. <%= grandTotal.toFixed(2) %></strong></p>
+    </div>
+
+   <div class="total-in-words" style="position: relative; bottom: 140px;">
+  <p>Total in words:<br/> <%= convertToWords(grandTotal) %> Rupees Only</p>
+</div>
+
+
+    <div class="qr-box" style="position: relative; bottom: 7.5rem;">
+      <img src="data:image/png;base64,<%= companyLogoBase64 %>" alt="FBR Logo" class="fbr-logo" />
+      <img src="<%= qrData %>" alt="QR Code" class="qr-image" />
+    </div>
+
+    <div class="clear"></div>
+</body>
+
+</html>

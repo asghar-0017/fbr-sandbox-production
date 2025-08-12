@@ -1,0 +1,22 @@
+name: Deploy App to Server
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build (optional)
+      run: npm run build
+
+    - name: Restart App (PM2 or custom script)
+      run: pm2 restart app || pm2 start index.js --united-tubes

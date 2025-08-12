@@ -39,7 +39,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.json());
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:5174', 'http://localhost:5150','http://localhost:3008','https://anwer-tex.inplsoftwares.online','*'],
+  origin: ['http://localhost:5174', 'http://localhost:5150','http://localhost:3007','https://pak-progressive.inplsoftwares.online','*'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
 }));

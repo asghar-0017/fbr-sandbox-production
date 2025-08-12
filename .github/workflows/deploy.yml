@@ -19,4 +19,4 @@ jobs:
       run: npm run build
 
     - name: Restart App (PM2 or custom script)
-      run: pm2 restart app || pm2 start index.js --united-tubes
+      run: pm2 restart app || pm2 start index.js --name united-tubes

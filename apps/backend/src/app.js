@@ -42,7 +42,7 @@ app.use(cors({
   origin: ['http://localhost:5174', 'http://localhost:5150','http://localhost:3003','https://united-tubes.inplsoftwares.online','*'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
-}));
+}))
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/invoices', express.static(path.join(process.cwd(), 'public/invoices')))

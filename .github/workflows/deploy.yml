@@ -23,6 +23,7 @@ jobs:
           npm install
 
       - name: Start or restart backend with PM2
-        run: |
-          cd ${{ github.workspace }}/apps/backend
-          pm2 start index.js --name united-tubes || pm2 restart united-tubes
+       run: |
+  cd ${{ github.workspace }}/apps/backend
+  /usr/local/bin/pm2 start index.js --name united-tubes || /usr/local/bin/pm2 restart united-tubes
+

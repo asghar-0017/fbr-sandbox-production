@@ -24,10 +24,10 @@ class TenantDatabaseService {
    
       // Create database connection without specifying database (to create it)
       const tempSequelize = new (await import('sequelize')).Sequelize({
-        host: process.env.MYSQL_HOST || '45.55.137.9',
-        port: process.env.MYSQL_PORT || 3306,
-        username: process.env.MYSQL_USER || 'fr_master_o',
-        password: process.env.MYSQL_PASSWORD || 'noLograt$5aion',
+        host: process.env.MYSQL_HOST ,
+        port: process.env.MYSQL_PORT,
+        username: process.env.MYSQL_USER ,
+        password: process.env.MYSQL_PASSWORD,
         dialect: 'mysql',
         logging: false,
         pool: {
@@ -52,7 +52,7 @@ class TenantDatabaseService {
       
       // Grant privileges to the user for the new database
       console.log(`Granting privileges for database: ${databaseName}`);
-      await tempSequelize.query(`GRANT ALL PRIVILEGES ON \`${databaseName}\`.* TO '${process.env.MYSQL_USER || 'fr_master_o'}'@'%'`);
+      await tempSequelize.query(`GRANT ALL PRIVILEGES ON \`${databaseName}\`.* TO '${process.env.MYSQL_USER}'@'%'`);
       await tempSequelize.query(`FLUSH PRIVILEGES`);
       console.log(`✅ Privileges granted for database: ${databaseName}`);
       

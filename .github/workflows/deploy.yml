@@ -2,7 +2,7 @@ name: Deploy Node.js Backend App via PM2
 
 on:
   push:
-    branches: [main]  # ya koi aur branch
+    branches: [main]  # ya apni branch yahan daal sakte ho
 
 jobs:
   deploy:
@@ -23,7 +23,6 @@ jobs:
           npm install
 
       - name: Start or restart backend with PM2
-       run: |
-  cd ${{ github.workspace }}/apps/backend
-  /usr/local/bin/pm2 start index.js --name united-tubes || /usr/local/bin/pm2 restart united-tubes
-
+        run: |
+          cd ${{ github.workspace }}/apps/backend
+          /usr/local/bin/pm2 start index.js --name united-tubes || /usr/local/bin/pm2 restart united-tubes

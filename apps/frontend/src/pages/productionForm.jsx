@@ -128,11 +128,7 @@ export default function ProductionFoam() {
       }),
       // HS codes will be loaded by OptimizedHSCodeSelector component with caching
       Promise.resolve([]),
-      fetch("https://gw.fbr.gov.pk/pdi/v1/doctypecode", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-        .then((response) => (response.ok ? response.json() : Promise.reject()))
-        .then((data) => setInvoiceTypes(data))
+      fetchData("pdi/v1/doctypecode", "production").then((data) => setInvoiceTypes(data))
         .catch(() =>
           setInvoiceTypes([
             { docTypeId: 4, docDescription: "Sale Invoice" },

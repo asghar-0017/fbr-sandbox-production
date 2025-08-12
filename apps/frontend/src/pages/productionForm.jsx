@@ -51,6 +51,7 @@ export default function ProductionFoam() {
     buyerAddress: "",
     buyerRegistrationType: "",
     invoiceRefNo: "",
+    companyInvoiceRefNo: "",
     transactionTypeId: "",
     items: [
       {
@@ -916,6 +917,7 @@ export default function ProductionFoam() {
       buyerAddress: "",
       buyerRegistrationType: "",
       invoiceRefNo: "",
+      companyInvoiceRefNo: "",
       transactionTypeId: "",
       items: [
         {
@@ -1026,6 +1028,18 @@ export default function ProductionFoam() {
                 onChange={(e) => handleChange("invoiceRefNo", e.target.value)}
                 variant="outlined"
                 disabled={formData.invoiceType === "Sale Invoice"}
+              />
+            </Box>
+
+            <Box sx={{ m: 1, flex: "1 1 30%", minWidth: "250px" }}>
+              <TextField
+                fullWidth
+                label="Company Invoice Ref No."
+                value={formData.companyInvoiceRefNo}
+                onChange={(e) =>
+                  handleChange("companyInvoiceRefNo", e.target.value)
+                }
+                variant="outlined"
               />
             </Box>
           </Box>

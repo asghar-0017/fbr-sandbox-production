@@ -13,6 +13,7 @@ import { Email } from "@mui/icons-material";
 import { MuiOtpInput } from "mui-one-time-password-input";
 import axios from "axios";
 import { API_CONFIG } from "../API/Api";
+import Footer from "../component/Footer";
 
 const { apiKeyLocal } = API_CONFIG;
 
@@ -92,6 +93,7 @@ const OTP = () => {
           </Button>
         </form>
       </Paper>
+      <Footer />
     </Box>
   );
 };

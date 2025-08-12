@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {API_CONFIG} from "../API/Api";
+import { API_CONFIG } from "../API/Api";
 import {
   Box,
   Typography,

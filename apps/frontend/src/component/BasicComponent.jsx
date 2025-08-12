@@ -22,8 +22,10 @@ import dayjs from "dayjs";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { api } from "../API/Api";
+import { api, API_CONFIG } from "../API/Api";
 import SearchIcon from "@mui/icons-material/Search";
 import SentimentDissatisfiedIcon from "@mui/icons-material/SentimentDissatisfied";
 import Tooltip from "@mui/material/Tooltip";
@@ -31,12 +33,14 @@ import { useTenantSelection } from "../Context/TenantSelectionProvider";
 import InvoiceViewModal from "./InvoiceViewModal";
 import CustomPagination from "./CustomPagination";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 export default function BasicTable() {
   const [invoices, setInvoices] = useState([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [saleType, setSaleType] = useState("All");
@@ -50,6 +54,8 @@ export default function BasicTable() {
   const theme = useTheme();
   const { selectedTenant } = useTenantSelection();
   const navigate = useNavigate();
+
+  const apiKey = API_CONFIG.apiKeyLocal;
 
   // Helper function to get status color
   const getStatusColor = (status) => {
@@ -183,7 +189,7 @@ export default function BasicTable() {
         return;
       }
 
-      const link = `https://fbrtestcase.inplsoftwares.online/api/print-invoice/${invoice.invoiceNumber}`;
+      const link = `${apiKey}/print-invoice/${invoice.invoiceNumber}`;
 
       window.open(link, "_blank");
     } catch (error) {
@@ -256,6 +262,61 @@ export default function BasicTable() {
         alert("Authentication failed. Please log in again.");
       } else {
         alert("Error fetching invoice details. Check console for details.");
+      }
+    }
+  };
+
+  const handleDeleteClick = async (invoice) => {
+    const result = await Swal.fire({
+      title: "Delete Invoice",
+      text: `Are you sure you want to delete invoice ${invoice.invoiceNumber}? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
+      try {
+        if (!selectedTenant) {
+          Swal.fire("Error", "No Company selected", "error");
+          return;
+        }
+
+        const response = await api.delete(
+          `/tenant/${selectedTenant.tenant_id}/invoices/${invoice.id}`
+        );
+
+        if (response.data.success) {
+          Swal.fire(
+            "Deleted!",
+            "Invoice has been deleted successfully.",
+            "success"
+          );
+          // Refresh the invoice list
+          getMyInvoices();
+        } else {
+          console.error("Failed to delete invoice:", response.data.message);
+          Swal.fire("Error", "Failed to delete invoice", "error");
+        }
+      } catch (error) {
+        console.error("Error deleting invoice:", error);
+        if (error.response?.status === 401) {
+          Swal.fire(
+            "Error",
+            "Authentication failed. Please log in again.",
+            "error"
+          );
+        } else {
+          Swal.fire(
+            "Error",
+            "Error deleting invoice. Please try again.",
+            "error"
+          );
+        }
       }
     }
   };
@@ -450,9 +511,6 @@ export default function BasicTable() {
             >
               <MenuItem value="All">All Status</MenuItem>
               <MenuItem value="draft">Draft</MenuItem>
-              <MenuItem value="saved">Saved</MenuItem>
-              <MenuItem value="validated">Validated</MenuItem>
-              <MenuItem value="submitted">Submitted</MenuItem>
               <MenuItem value="posted">Posted</MenuItem>
             </TextField>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -536,7 +594,7 @@ export default function BasicTable() {
                         "Buyer",
                         "Buyer NTN",
                         "Transaction ID",
-                        "HS Code",
+                        "Product Description",
                         "Actions",
                       ].map((heading) => (
                         <TableCell
@@ -590,7 +648,48 @@ export default function BasicTable() {
                             fontSize: 13,
                           }}
                         >
-                          {row.invoiceNumber}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                            }}
+                          >
+                            {row.invoiceNumber}
+                            <Tooltip title="Copy Invoice Number">
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    row.invoiceNumber
+                                  );
+                                  Swal.fire({
+                                    title: "Copied!",
+                                    text: `Invoice Number "${row.invoiceNumber}" copied to clipboard.`,
+                                    icon: "success",
+                                    toast: true,
+                                    position: "top-end",
+                                    showConfirmButton: false,
+                                    timer: 3000,
+                                    timerProgressBar: true,
+                                  });
+                                }}
+                                sx={{
+                                  minWidth: "24px",
+                                  width: "24px",
+                                  height: "24px",
+                                  p: 0,
+                                  color: "#607d8b",
+                                  "&:hover": {
+                                    color: "#1976d2",
+                                  },
+                                }}
+                              >
+                                <ContentCopyIcon fontSize="10px" />
+                              </Button>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                         <TableCell
                           component="th"
@@ -642,7 +741,7 @@ export default function BasicTable() {
                         <TableCell align="center">
                           {row.items && row.items.length > 0
                             ? row.items
-                                .map((item) => item.hsCode || "N/A")
+                                .map((item) => item.productDescription || "N/A")
                                 .join(", ")
                             : "N/A"}
                         </TableCell>
@@ -699,27 +798,50 @@ export default function BasicTable() {
                               </Button>
                             </Tooltip>
                             {row.status === "draft" && (
-                              <Tooltip title={`Edit Draft Invoice`}>
-                                <Button
-                                  variant="outlined"
-                                  color="warning"
-                                  size="small"
-                                  onClick={() => handleEditInvoice(row)}
-                                  sx={{
-                                    minWidth: "32px",
-                                    width: "32px",
-                                    height: "32px",
-                                    p: 0,
-                                    "&:hover": {
-                                      backgroundColor: "warning.main",
-                                      color: "warning.contrastText",
-                                      borderColor: "warning.main",
-                                    },
-                                  }}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </Button>
-                              </Tooltip>
+                              <>
+                                <Tooltip title={`Edit Draft Invoice`}>
+                                  <Button
+                                    variant="outlined"
+                                    color="warning"
+                                    size="small"
+                                    onClick={() => handleEditInvoice(row)}
+                                    sx={{
+                                      minWidth: "32px",
+                                      width: "32px",
+                                      height: "32px",
+                                      p: 0,
+                                      "&:hover": {
+                                        backgroundColor: "warning.main",
+                                        color: "warning.contrastText",
+                                        borderColor: "warning.main",
+                                      },
+                                    }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip title="Delete Invoice">
+                                  <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    onClick={() => handleDeleteClick(row)}
+                                    sx={{
+                                      minWidth: "32px",
+                                      width: "32px",
+                                      height: "32px",
+                                      p: 0,
+                                      "&:hover": {
+                                        backgroundColor: "error.main",
+                                        color: "error.contrastText",
+                                        borderColor: "error.main",
+                                      },
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </Button>
+                                </Tooltip>
+                              </>
                             )}
                           </Box>
                         </TableCell>

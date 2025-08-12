@@ -244,6 +244,10 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
               <Typography variant="body2">
                 <strong>Date:</strong> {invoice.invoiceDate}
               </Typography>
+              <Typography variant="body2">
+                <strong>Company Invoice Ref No:</strong>{" "}
+                {invoice.companyInvoiceRefNo || "N/A"}
+              </Typography>
             </Box>
           </Box>
 
@@ -498,7 +502,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {item.unitPrice}
+                      {(parseFloat(item.unitPrice) || 0).toFixed(2)}
                     </TableCell>
                     <TableCell
                       sx={{

@@ -49,7 +49,38 @@ import { api, API_CONFIG, debugTokenManager } from "../API/Api";
 
 import TenantSelectionPrompt from "../component/TenantSelectionPrompt";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
+import BuyerModal from "../component/BuyerModal";
 // import TenantDashboard from "../component/TenantDashboard";
+
+// Utility function to format numbers with commas
+const formatNumberWithCommas = (value) => {
+  if (!value || isNaN(parseFloat(value))) return "";
+  const num = parseFloat(value);
+  return num.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+// Utility function to format integers with commas
+const formatIntegerWithCommas = (value) => {
+  if (!value || isNaN(parseInt(value))) return "";
+  const num = parseInt(value);
+  return num.toLocaleString("en-US");
+};
+
+// Utility function to format editable numbers with commas but without decimals
+const formatEditableNumberWithCommas = (value) => {
+  if (!value || isNaN(parseFloat(value))) return "";
+  const num = parseFloat(value);
+  return num.toLocaleString("en-US");
+};
+
+// Utility function to remove commas and convert back to number
+const removeCommas = (value) => {
+  if (!value) return "";
+  return value.replace(/,/g, "");
+};
 
 export default function CreateInvoice() {
   const { selectedTenant, tokensLoaded, retryTokenFetch } =
@@ -68,6 +99,7 @@ export default function CreateInvoice() {
     buyerAddress: "",
     buyerRegistrationType: "",
     invoiceRefNo: "",
+    companyInvoiceRefNo: "",
     transctypeId: "",
     items: [
       {
@@ -76,8 +108,8 @@ export default function CreateInvoice() {
         rate: "",
         uoM: "",
         quantity: "1",
-        unitPrice: "0", // NEW FIELD
-        retailPrice: "0", // RENAMED
+        unitPrice: "0.00", // Calculated field: Retail Price ÷ Quantity
+        retailPrice: "0", // User input field
         totalValues: "0",
         valueSalesExcludingST: "0",
         salesTaxApplicable: "0",
@@ -116,6 +148,7 @@ export default function CreateInvoice() {
   const [invoiceTypes, setInvoiceTypes] = React.useState([]);
   const [buyers, setBuyers] = useState([]);
   const [selectedBuyerId, setSelectedBuyerId] = useState("");
+  const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const navigate = useNavigate();
   const [allLoading, setAllLoading] = React.useState(true);
   const [transactionTypeId, setTransactionTypeId] = React.useState(null);
@@ -222,6 +255,7 @@ export default function CreateInvoice() {
           buyerAddress: invoiceData.buyerAddress || "",
           buyerRegistrationType: invoiceData.buyerRegistrationType || "",
           invoiceRefNo: invoiceData.invoiceRefNo || "",
+          companyInvoiceRefNo: invoiceData.companyInvoiceRefNo || "",
           transctypeId:
             invoiceData.transctypeId ||
             invoiceData.scenario_id ||
@@ -235,7 +269,9 @@ export default function CreateInvoice() {
                   rate: item.rate || "",
                   uoM: item.uoM || "",
                   quantity: item.quantity || "1",
-                  unitPrice: item.unitPrice || "0",
+                  unitPrice: item.unitPrice
+                    ? parseFloat(item.unitPrice).toFixed(2)
+                    : "0.00", // This will be recalculated from retail price
                   retailPrice: item.retailPrice || "0",
                   totalValues: item.totalValues || "0",
                   valueSalesExcludingST: item.valueSalesExcludingST || "0",
@@ -266,8 +302,8 @@ export default function CreateInvoice() {
                     rate: "",
                     uoM: "",
                     quantity: "1",
-                    unitPrice: "0",
-                    retailPrice: "0",
+                    unitPrice: "0.00", // Calculated field: Retail Price ÷ Quantity
+                    retailPrice: "0", // User input field
                     totalValues: "0",
                     valueSalesExcludingST: "0",
                     salesTaxApplicable: "0",
@@ -447,23 +483,25 @@ export default function CreateInvoice() {
     }
   }, [buyers]);
 
-  // Fix retail price calculation when editing - ensure retail price is calculated from unit price and quantity
+  // Fix unit cost calculation when editing - ensure unit cost is calculated from retail price and quantity
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
     if (isEditing && formData.items && formData.items.length > 0) {
-      console.log("Fixing retail price calculation for editing mode");
+      console.log("Fixing unit cost calculation for editing mode");
       setFormData((prev) => {
         const updatedItems = prev.items.map((item) => {
-          if (item.unitPrice && item.quantity && !item.isValueSalesManual) {
-            const unitPrice = parseFloat(item.unitPrice || 0);
+          if (item.retailPrice && item.quantity && !item.isValueSalesManual) {
+            const retailPrice = parseFloat(
+              parseFloat(item.retailPrice || 0).toFixed(2)
+            );
             const quantity = parseFloat(item.quantity || 0);
-            const retailPrice = unitPrice * quantity;
+            const unitCost = quantity > 0 ? retailPrice / quantity : 0;
             console.log(
-              `Recalculating retail price for editing: ${unitPrice} × ${quantity} = ${retailPrice}`
+              `Recalculating unit cost for editing: ${retailPrice} ÷ ${quantity} = ${unitCost.toFixed(2)}`
             );
             return {
               ...item,
-              retailPrice: retailPrice.toString(),
+              unitPrice: unitCost.toFixed(2),
               valueSalesExcludingST: retailPrice.toString(),
             };
           }
@@ -670,6 +708,84 @@ export default function CreateInvoice() {
     fetchBuyers();
   }, [selectedTenant]);
 
+  // BuyerModal functions
+  const openBuyerModal = () => {
+    setIsBuyerModalOpen(true);
+  };
+
+  const closeBuyerModal = () => {
+    setIsBuyerModalOpen(false);
+  };
+
+  const handleSaveBuyer = async (buyerData) => {
+    try {
+      const transformedData = {
+        buyerNTNCNIC: buyerData.buyerNTNCNIC,
+        buyerBusinessName: buyerData.buyerBusinessName,
+        buyerProvince: buyerData.buyerProvince,
+        buyerAddress: buyerData.buyerAddress,
+        buyerRegistrationType: buyerData.buyerRegistrationType,
+      };
+
+      // Create new buyer
+      const response = await api.post(
+        `/tenant/${selectedTenant.tenant_id}/buyers`,
+        transformedData
+      );
+
+      // Add the new buyer to the list
+      setBuyers([...buyers, response.data.data]);
+
+      // Close modal on success
+      closeBuyerModal();
+
+      // Show success message
+      Swal.fire({
+        icon: "success",
+        title: "Buyer Added Successfully!",
+        text: "The buyer has been added to your system.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("Error saving buyer:", error);
+
+      let errorMessage = "Error saving buyer.";
+
+      if (error.response) {
+        const { status, data } = error.response;
+
+        if (status === 400) {
+          if (data.message && data.message.includes("already exists")) {
+            errorMessage =
+              "A buyer with this NTN/CNIC already exists. Please use a different NTN/CNIC.";
+          } else if (data.message && data.message.includes("validation")) {
+            errorMessage =
+              "Please check your input data. Some fields may be invalid or missing.";
+          } else {
+            errorMessage =
+              data.message || "Invalid data provided. Please check all fields.";
+          }
+        } else if (status === 409) {
+          errorMessage = "This buyer already exists in our system.";
+        } else if (status === 500) {
+          errorMessage = "Server error occurred. Please try again later.";
+        } else {
+          errorMessage =
+            data.message || "An error occurred while saving the buyer.";
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: errorMessage,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!selectedBuyerId) return;
     const buyer = buyers.find((b) => b.id === selectedBuyerId);
@@ -698,8 +814,8 @@ export default function CreateInvoice() {
       if (
         [
           "quantity",
-          "unitPrice", // NEW
-          "retailPrice", // RENAMED
+          "unitPrice", // Calculated field
+          "retailPrice", // User input field
           "valueSalesExcludingST",
           "salesTaxApplicable",
           "totalValues",
@@ -766,18 +882,22 @@ export default function CreateInvoice() {
         prev.scenarioId === "SN027" ||
         prev.scenarioId === "SN008";
 
-      // Auto-calculate retail price and sales tax if not manual
+      // Auto-calculate unit cost and sales tax if not manual
       if (!item.isValueSalesManual) {
-        const unitPrice = parseFloat(item.unitPrice || 0);
+        const retailPrice = parseFloat(
+          parseFloat(item.retailPrice || 0).toFixed(2)
+        );
         const quantity = parseFloat(item.quantity || 0);
-        const retailPrice = unitPrice * quantity;
-        item.retailPrice = retailPrice.toString();
+
+        // Calculate unit cost: Retail Price ÷ Quantity
+        const unitCost = quantity > 0 ? retailPrice / quantity : 0;
+        item.unitPrice = unitCost.toFixed(2);
         item.valueSalesExcludingST = retailPrice.toString();
 
-        // Ensure retail price is always calculated when unit price or quantity changes
-        if (field === "unitPrice" || field === "quantity") {
+        // Ensure unit cost is always calculated when retail price or quantity changes
+        if (field === "retailPrice" || field === "quantity") {
           console.log(
-            `Recalculating retail price: ${unitPrice} × ${quantity} = ${retailPrice}`
+            `Recalculating unit cost: ${retailPrice} ÷ ${quantity} = ${unitCost.toFixed(2)}`
           );
         }
 
@@ -803,10 +923,11 @@ export default function CreateInvoice() {
               const quantity = parseFloat(item.quantity || 0);
               salesTax = fixedAmount * quantity; // Fixed amount per SqY × quantity
             } else {
-              // Handle percentage rates
+              // Handle percentage rates - use valueSalesExcludingST instead of retailPrice
               const rate = parseFloat((item.rate || "0").replace("%", "")) || 0;
               const rateFraction = rate / 100;
-              salesTax = retailPrice * rateFraction;
+              const valueSales = parseFloat(item.valueSalesExcludingST || 0);
+              salesTax = valueSales * rateFraction;
             }
 
             item.salesTaxApplicable = salesTax.toString();
@@ -837,7 +958,7 @@ export default function CreateInvoice() {
               const quantity = parseFloat(item.quantity || 0);
               salesTax = fixedAmount * quantity; // Fixed amount per SqY × quantity
             } else {
-              // Handle percentage rates
+              // Handle percentage rates - use valueSalesExcludingST
               const rate = parseFloat((item.rate || "0").replace("%", "")) || 0;
               const rateFraction = rate / 100;
               const valueSales = parseFloat(item.valueSalesExcludingST || 0);
@@ -908,8 +1029,8 @@ export default function CreateInvoice() {
           rate: "",
           uoM: "",
           quantity: "1",
-          unitPrice: "0",
-          retailPrice: "0",
+          unitPrice: "0.00", // Calculated field: Retail Price ÷ Quantity
+          retailPrice: "0", // User input field
           totalValues: "0",
           valueSalesExcludingST: "0",
           salesTaxApplicable: "0",
@@ -1145,6 +1266,7 @@ export default function CreateInvoice() {
       "buyerProvince",
       "buyerAddress",
       "invoiceRefNo",
+      "companyInvoiceRefNo",
       "scenarioId",
     ];
 
@@ -1374,11 +1496,18 @@ export default function CreateInvoice() {
     }
 
     if (
-      !item.unitPrice ||
-      item.unitPrice === "" ||
-      parseFloat(item.unitPrice) < 0
+      !item.retailPrice ||
+      item.retailPrice === "" ||
+      parseFloat(item.retailPrice) < 0
     ) {
-      errors.push("Unit Price cannot be negative");
+      errors.push("Retail Price cannot be negative");
+    }
+
+    // Validate retail price format (should be a valid number with up to 2 decimal places)
+    if (item.retailPrice && !/^\d+(\.\d{1,2})?$/.test(item.retailPrice)) {
+      errors.push(
+        "Retail Price must be a valid number with up to 2 decimal places"
+      );
     }
 
     if (
@@ -1394,8 +1523,8 @@ export default function CreateInvoice() {
       errors.push("Quantity must be a valid number");
     }
 
-    if (item.unitPrice && isNaN(parseFloat(item.unitPrice))) {
-      errors.push("Unit Price must be a valid number");
+    if (item.retailPrice && isNaN(parseFloat(item.retailPrice))) {
+      errors.push("Retail Price must be a valid number");
     }
 
     if (item.totalValues && isNaN(parseFloat(item.totalValues))) {
@@ -1806,8 +1935,8 @@ export default function CreateInvoice() {
             message: `Quantity is required for item ${index + 1}`,
           },
           {
-            field: "unitPrice",
-            message: `Unit Price is required for item ${index + 1}`,
+            field: "retailPrice",
+            message: `Retail Price is required for item ${index + 1}`,
           },
           {
             field: "valueSalesExcludingST",
@@ -1850,7 +1979,8 @@ export default function CreateInvoice() {
         for (const { field, message } of itemRequiredFields) {
           if (
             !item[field] ||
-            (field === "valueSalesExcludingST" && item[field] <= 0)
+            (field === "valueSalesExcludingST" && item[field] <= 0) ||
+            (field === "retailPrice" && parseFloat(item[field]) <= 0)
           ) {
             console.log(`Validation failed for field '${field}':`, {
               value: item[field],
@@ -2222,6 +2352,7 @@ export default function CreateInvoice() {
       buyerAddress: "",
       buyerRegistrationType: "",
       invoiceRefNo: "",
+      companyInvoiceRefNo: "",
       transctypeId: "",
       items: [
         {
@@ -2230,8 +2361,8 @@ export default function CreateInvoice() {
           rate: "",
           uoM: "",
           quantity: "1",
-          unitPrice: "0",
-          retailPrice: "0",
+          unitPrice: "0.00", // Calculated field: Retail Price ÷ Quantity
+          retailPrice: "0", // User input field
           totalValues: "0",
           valueSalesExcludingST: "0",
           salesTaxApplicable: "0",
@@ -2476,10 +2607,6 @@ export default function CreateInvoice() {
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
             backdropFilter: "blur(10px)",
             transition: "all 0.3s ease",
-            "&:hover": {
-              boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-              transform: "translateY(-2px)",
-            },
             position: "relative",
             zIndex: 1,
           }}
@@ -2561,6 +2688,23 @@ export default function CreateInvoice() {
                 "& .MuiInputLabel-root": { color: "#6b7280" },
               }}
             />
+
+            <TextField
+              fullWidth
+              size="small"
+              label="Company Invoice Ref No."
+              value={formData.companyInvoiceRefNo}
+              onChange={(e) =>
+                handleChange("companyInvoiceRefNo", e.target.value)
+              }
+              variant="outlined"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": { borderColor: "#e5e7eb" },
+                },
+                "& .MuiInputLabel-root": { color: "#6b7280" },
+              }}
+            />
           </Box>
         </Box>
 
@@ -2570,16 +2714,12 @@ export default function CreateInvoice() {
           sx={{
             border: "none",
             borderRadius: 2,
-            p: { xs: 1.5, sm: 2 },
+            p: { xs: 1.5, sm: 4 },
             mb: 2,
             background: "rgba(255, 255, 255, 0.95)",
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
             backdropFilter: "blur(10px)",
             transition: "all 0.3s ease",
-            "&:hover": {
-              boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-              transform: "translateY(-2px)",
-            },
             position: "relative",
             zIndex: 1,
           }}
@@ -2591,7 +2731,36 @@ export default function CreateInvoice() {
               gap: 2,
             }}
           >
-            <Box>
+            <Box sx={{ position: "relative" }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -31,
+                  right: 0,
+                  zIndex: 2,
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={openBuyerModal}
+                  sx={{
+                    color: "#007AFF",
+                    borderColor: "#007AFF",
+                    backgroundColor: "rgba(0, 122, 255, 0.05)",
+                    fontSize: "0.75rem",
+                    padding: "2px 4px",
+                    minWidth: "auto",
+                    height: "23px",
+                    "&:hover": {
+                      backgroundColor: "rgba(0, 122, 255, 0.1)",
+                      borderColor: "#0056CC",
+                    },
+                  }}
+                >
+                  Add Buyer
+                </Button>
+              </Box>
               <Autocomplete
                 fullWidth
                 size="small"
@@ -2629,34 +2798,45 @@ export default function CreateInvoice() {
               />
             </Box>
             <Box>
-              <FormControl fullWidth size="small">
-                <InputLabel id="transctypeId">Transaction Type</InputLabel>
-                <Select
-                  labelId="transctypeId"
-                  name="transctypeId"
-                  value={formData.transctypeId ?? ""}
-                  label="Transaction Type"
-                  onChange={(e) => handleTransactionTypeChange(e.target.value)}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      "& fieldset": { borderColor: "#e5e7eb" },
-                    },
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>Select a transaction type</em>
-                  </MenuItem>
-                  {transactionTypes.map((transactionType) => (
-                    <MenuItem
-                      key={transactionType.transactioN_TYPE_ID}
-                      value={transactionType.transactioN_TYPE_ID}
-                    >
-                      {transactionType.transactioN_TYPE_ID} -{" "}
-                      {transactionType.transactioN_DESC}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                options={transactionTypes}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : `${option.transactioN_TYPE_ID} - ${option.transactioN_DESC}`
+                }
+                value={
+                  transactionTypes.find(
+                    (type) => type.transactioN_TYPE_ID === formData.transctypeId
+                  ) || null
+                }
+                onChange={(event, newValue) => {
+                  if (newValue) {
+                    handleTransactionTypeChange(newValue.transactioN_TYPE_ID);
+                  } else {
+                    handleTransactionTypeChange("");
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Transaction Type"
+                    size="small"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "#e5e7eb" },
+                      },
+                    }}
+                  />
+                )}
+                isOptionEqualToValue={(option, value) =>
+                  option.transactioN_TYPE_ID === value.transactioN_TYPE_ID
+                }
+                freeSolo
+                selectOnFocus
+                clearOnBlur={false}
+                handleHomeEndKeys
+              />
             </Box>
           </Box>
 
@@ -2673,10 +2853,6 @@ export default function CreateInvoice() {
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
             backdropFilter: "blur(10px)",
             transition: "all 0.3s ease",
-            "&:hover": {
-              boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-              transform: "translateY(-2px)",
-            },
             position: "relative",
             zIndex: 1,
           }}
@@ -2840,24 +3016,20 @@ export default function CreateInvoice() {
                 <TextField
                   fullWidth
                   size="small"
-                  label="Unit Price"
+                  label="Unit Cost"
                   type="text"
-                  value={
-                    item.unitPrice ? parseFloat(item.unitPrice).toString() : ""
-                  }
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Allow only numbers and decimal points
-                    if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                      handleItemChange(index, "unitPrice", value);
-                    }
-                  }}
+                  value={formatNumberWithCommas(item.unitPrice)}
+                  InputProps={{ readOnly: true }}
                   variant="outlined"
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       "& fieldset": { borderColor: "#e5e7eb" },
                     },
                     "& .MuiInputLabel-root": { color: "#6b7280" },
+                    "& .MuiInputBase-input.Mui-readOnly": {
+                      backgroundColor: "#f5f5f5",
+                      cursor: "not-allowed",
+                    },
                   }}
                 />
                 <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
@@ -2866,11 +3038,9 @@ export default function CreateInvoice() {
                     size="small"
                     label="Qty"
                     type="text"
-                    value={
-                      item.quantity ? parseInt(item.quantity).toString() : ""
-                    }
+                    value={formatIntegerWithCommas(item.quantity)}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers
                       if (value === "" || /^\d*$/.test(value)) {
                         handleItemChange(index, "quantity", value);
@@ -2883,15 +3053,31 @@ export default function CreateInvoice() {
                   <TextField
                     fullWidth
                     size="small"
-                    label="Retail Price"
+                    label="Total Price"
                     type="text"
-                    value={
-                      item.retailPrice
-                        ? parseFloat(item.retailPrice).toString()
-                        : ""
-                    }
-                    InputProps={{ readOnly: true }}
+                    value={formatEditableNumberWithCommas(item.retailPrice)}
+                    onChange={(e) => {
+                      const value = removeCommas(e.target.value);
+                      // Allow only numbers and decimal points
+                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                        handleItemChange(index, "retailPrice", value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Format to 2 decimal places when leaving the field
+                      const value = removeCommas(e.target.value);
+                      if (value && !isNaN(parseFloat(value))) {
+                        const formattedValue = parseFloat(value).toFixed(2);
+                        handleItemChange(index, "retailPrice", formattedValue);
+                      }
+                    }}
                     variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "#e5e7eb" },
+                      },
+                      "& .MuiInputLabel-root": { color: "#6b7280" },
+                    }}
                   />
                 </Box>
                 <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
@@ -2900,11 +3086,7 @@ export default function CreateInvoice() {
                     size="small"
                     label="Value Sales (Excl. ST)"
                     type="text"
-                    value={
-                      item.valueSalesExcludingST
-                        ? parseFloat(item.valueSalesExcludingST).toString()
-                        : ""
-                    }
+                    value={formatNumberWithCommas(item.valueSalesExcludingST)}
                     InputProps={{
                       readOnly: true,
                     }}
@@ -2924,11 +3106,7 @@ export default function CreateInvoice() {
                     size="small"
                     label="Sales Tax Applicable"
                     type="text"
-                    value={
-                      item.salesTaxApplicable
-                        ? parseFloat(item.salesTaxApplicable).toString()
-                        : ""
-                    }
+                    value={formatNumberWithCommas(item.salesTaxApplicable)}
                     InputProps={{
                       readOnly: true,
                     }}
@@ -2950,13 +3128,11 @@ export default function CreateInvoice() {
                     size="small"
                     label="ST Withheld at Source"
                     type="text"
-                    value={
+                    value={formatEditableNumberWithCommas(
                       item.salesTaxWithheldAtSource
-                        ? parseFloat(item.salesTaxWithheldAtSource).toString()
-                        : ""
-                    }
+                    )}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers and decimal points
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         handleItemChange(
@@ -2975,11 +3151,9 @@ export default function CreateInvoice() {
                     size="small"
                     label="Extra Tax"
                     type="text"
-                    value={
-                      item.extraTax ? parseFloat(item.extraTax).toString() : ""
-                    }
+                    value={formatEditableNumberWithCommas(item.extraTax)}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers and decimal points
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         handleItemChange(index, "extraTax", value);
@@ -2994,13 +3168,9 @@ export default function CreateInvoice() {
                     size="small"
                     label="Further Tax"
                     type="text"
-                    value={
-                      item.furtherTax
-                        ? parseFloat(item.furtherTax).toString()
-                        : ""
-                    }
+                    value={formatEditableNumberWithCommas(item.furtherTax)}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers and decimal points
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         handleItemChange(index, "furtherTax", value);
@@ -3015,13 +3185,9 @@ export default function CreateInvoice() {
                     size="small"
                     label="FED Payable"
                     type="text"
-                    value={
-                      item.fedPayable
-                        ? parseFloat(item.fedPayable).toString()
-                        : ""
-                    }
+                    value={formatEditableNumberWithCommas(item.fedPayable)}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers and decimal points
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         handleItemChange(index, "fedPayable", value);
@@ -3036,11 +3202,9 @@ export default function CreateInvoice() {
                     size="small"
                     label="Discount"
                     type="text"
-                    value={
-                      item.discount ? parseFloat(item.discount).toString() : ""
-                    }
+                    value={formatEditableNumberWithCommas(item.discount)}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      const value = removeCommas(e.target.value);
                       // Allow only numbers and decimal points
                       if (value === "" || /^\d*\.?\d*$/.test(value)) {
                         handleItemChange(index, "discount", value);
@@ -3063,10 +3227,7 @@ export default function CreateInvoice() {
               >
                 <Box sx={{ flex: "0 1 18%", minWidth: "150px" }}>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    Total Values:{" "}
-                    {item.totalValues
-                      ? parseFloat(item.totalValues).toString()
-                      : ""}
+                    Total Values: {formatNumberWithCommas(item.totalValues)}
                   </Typography>
                 </Box>
                 <Tooltip title={editingItemIndex ? "Update Item" : "Add Item"}>
@@ -3105,7 +3266,7 @@ export default function CreateInvoice() {
         {addedItems.length === 0 && (
           <Box
             sx={{
-              border: "2px dashed rgba(99, 102, 241, 0.3)",
+              border: "2px dashed #2A69B0",
               borderRadius: 2,
               p: 3,
               mb: 2,
@@ -3116,7 +3277,7 @@ export default function CreateInvoice() {
             <Typography
               variant="body1"
               sx={{
-                color: "rgba(99, 102, 241, 0.7)",
+                color: "#2A69B0",
                 fontWeight: 500,
                 mb: 1,
               }}
@@ -3126,7 +3287,7 @@ export default function CreateInvoice() {
             <Typography
               variant="body2"
               sx={{
-                color: "rgba(99, 102, 241, 0.6)",
+                color: "#2A69B0",
                 fontSize: "0.875rem",
               }}
             >
@@ -3148,10 +3309,6 @@ export default function CreateInvoice() {
               boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
               backdropFilter: "blur(10px)",
               transition: "all 0.3s ease",
-              "&:hover": {
-                boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-                transform: "translateY(-2px)",
-              },
               position: "relative",
               zIndex: 1,
             }}
@@ -3197,7 +3354,7 @@ export default function CreateInvoice() {
                         Quantity
                       </TableCell>
                       <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
-                        Unit Price
+                        Unit Cost
                       </TableCell>
                       <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
                         Total Value
@@ -3401,6 +3558,14 @@ export default function CreateInvoice() {
             <CircularProgress size={50} color="primary" />
           </Box>
         )}
+
+        {/* Buyer Modal */}
+        <BuyerModal
+          isOpen={isBuyerModalOpen}
+          onClose={closeBuyerModal}
+          onSave={handleSaveBuyer}
+          buyer={null}
+        />
       </Box>
     </TenantSelectionPrompt>
   );

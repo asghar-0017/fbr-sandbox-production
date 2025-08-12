@@ -653,22 +653,6 @@ const TenantDashboard = () => {
         )
       )}
 
-      {/* Footer */}
-      <Box
-        sx={{
-          textAlign: "center",
-          backgroundColor: "#2A69B0",
-          color: "white",
-          fontSize: 12,
-          width: "100%",
-          py: 2,
-          px: 3,
-          borderRadius: 1,
-        }}
-      >
-        Powered by INPL
-      </Box>
-
       {/* Debug section - remove in production */}
       {process.env.NODE_ENV === "development" && (
         <Box mt={2} p={2} bgcolor="rgba(255,255,255,0.1)" borderRadius={1}>

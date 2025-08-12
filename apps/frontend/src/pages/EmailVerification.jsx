@@ -12,6 +12,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import { Email } from "@mui/icons-material";
 import axios from "axios";
 import { API_CONFIG } from "../API/Api";
+import Footer from "../component/Footer";
 
 const { apiKeyLocal } = API_CONFIG;
 
@@ -193,6 +194,7 @@ const EmailVerification = () => {
         {/* Bottom Border Line */}
         <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mt-4 lg:mt-6"></div>
       </div>
+      <Footer />
     </div>
   );
 };

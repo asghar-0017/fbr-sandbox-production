@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Box, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import {
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  CircularProgress,
+} from "@mui/material";
 import { fetchData } from "../API/GetApi";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
 
@@ -134,10 +142,43 @@ const RateSelector = ({
     }
   };
 
-  // Fetch rates when dependencies change
+  // Manual function to fetch rates
+  const handleFetchRates = async () => {
+    if (!tokensLoaded) {
+      console.warn("Tokens not loaded yet, cannot fetch rates");
+      return;
+    }
+
+    if (!transactionTypeId) {
+      console.warn("Transaction type not selected yet");
+      return;
+    }
+
+    if (!selectedProvince) {
+      console.warn("Province not selected yet");
+      return;
+    }
+
+    await getRateData();
+  };
+
+  // Fetch rates when dependencies change (only for editing mode)
   useEffect(() => {
-    getRateData();
+    const isEditing = localStorage.getItem("editingInvoice") === "true";
+    if (isEditing && item.rate && transactionTypeId && selectedProvince) {
+      getRateData();
+    }
   }, [transactionTypeId, selectedProvince, tokensLoaded]);
+
+  // Clear rates and fetch new ones when transactionTypeId changes
+  useEffect(() => {
+    if (transactionTypeId && selectedProvince && tokensLoaded) {
+      // Clear previous rates immediately when transaction type changes
+      setRates([]);
+      // Fetch new rates for the current transaction type
+      getRateData();
+    }
+  }, [transactionTypeId]);
 
   // Additional effect to handle editing when transactionTypeId is set after component mount
   useEffect(() => {
@@ -270,56 +311,102 @@ const RateSelector = ({
 
   return (
     <Box sx={{ flex: "1 1 22%", minWidth: "180px" }}>
-      <FormControl
-        fullWidth
-        size="small"
-        error={showTransactionTypeMessage || showProvinceMessage}
-      >
-        <InputLabel id={`rate-${index}`}>Rate</InputLabel>
-        <Select
-          labelId={`rate-${index}`}
-          value={item.rate || ""}
-          label="Rate"
-          onChange={handleRateChange}
-          disabled={
-            showTransactionTypeMessage || showProvinceMessage || loading
-          }
+      <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
+        <FormControl
+          size="small"
+          error={showTransactionTypeMessage || showProvinceMessage}
+          sx={{ flex: 1 }}
         >
-          {/* Debug info for editing mode */}
-          {localStorage.getItem("editingInvoice") === "true" && item.rate && (
-            <div style={{ display: "none" }}>
-              Debug: Editing mode with rate "{item.rate}" for item {index}
-            </div>
+          <InputLabel id={`rate-${index}`}>Rate</InputLabel>
+          <Select
+            labelId={`rate-${index}`}
+            value={item.rate || ""}
+            label="Rate"
+            onChange={handleRateChange}
+            disabled={
+              showTransactionTypeMessage || showProvinceMessage || loading
+            }
+          >
+            {/* Debug info for editing mode */}
+            {localStorage.getItem("editingInvoice") === "true" && item.rate && (
+              <div style={{ display: "none" }}>
+                Debug: Editing mode with rate "{item.rate}" for item {index}
+              </div>
+            )}
+            {showTransactionTypeMessage ? (
+              <MenuItem value="">Please select transaction type first</MenuItem>
+            ) : showProvinceMessage ? (
+              <MenuItem value="">Please select province first</MenuItem>
+            ) : loading ? (
+              <MenuItem value="">Loading rates...</MenuItem>
+            ) : rates.length === 0 ? (
+              <MenuItem value="">No rates available</MenuItem>
+            ) : (
+              rates.map((rate) => (
+                <MenuItem key={rate.ratE_ID} value={rate.ratE_DESC}>
+                  {rate.ratE_DESC}
+                </MenuItem>
+              ))
+            )}
+          </Select>
+          {showTransactionTypeMessage && (
+            <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
+              {isEditingWithRate
+                ? "Loading transaction type data..."
+                : "Please select transaction type first."}
+            </Box>
           )}
-          {showTransactionTypeMessage ? (
-            <MenuItem value="">Please select transaction type first</MenuItem>
-          ) : showProvinceMessage ? (
-            <MenuItem value="">Please select province first</MenuItem>
-          ) : loading ? (
-            <MenuItem value="">Loading rates...</MenuItem>
-          ) : rates.length === 0 ? (
-            <MenuItem value="">No rates available</MenuItem>
-          ) : (
-            rates.map((rate) => (
-              <MenuItem key={rate.ratE_ID} value={rate.ratE_DESC}>
-                {rate.ratE_DESC}
-              </MenuItem>
-            ))
+          {showProvinceMessage && (
+            <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
+              Please select province first.
+            </Box>
           )}
-        </Select>
-        {showTransactionTypeMessage && (
-          <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
-            {isEditingWithRate
-              ? "Loading transaction type data..."
-              : "Please select transaction type first."}
-          </Box>
+        </FormControl>
+
+        {/* Get Rate Button - Only show when transaction type is selected */}
+        {transactionTypeId && (
+          <Button
+            onClick={handleFetchRates}
+            disabled={loading || !tokensLoaded || !selectedProvince}
+            variant="outlined"
+            size="small"
+            sx={{
+              color: "#007AFF",
+              borderColor: "#007AFF",
+              backgroundColor: "rgba(0, 122, 255, 0.05)",
+              fontWeight: 500,
+              fontSize: "11px",
+              py: 0.5,
+              px: 1,
+              borderRadius: 2,
+              textTransform: "none",
+              minWidth: "auto",
+              height: "40px",
+              "&:hover": {
+                backgroundColor: "rgba(0, 122, 255, 0.1)",
+                borderColor: "#0056CC",
+              },
+              "&:disabled": {
+                color: "rgba(0, 122, 255, 0.5)",
+                borderColor: "rgba(0, 122, 255, 0.3)",
+              },
+              transition: "all 0.2s ease-in-out",
+            }}
+          >
+            {loading ? (
+              <>
+                <CircularProgress
+                  size={14}
+                  sx={{ mr: 0.5, color: "#007AFF" }}
+                />
+                Getting...
+              </>
+            ) : (
+              "Get Rates"
+            )}
+          </Button>
         )}
-        {showProvinceMessage && (
-          <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
-            Please select province first.
-          </Box>
-        )}
-      </FormControl>
+      </Box>
     </Box>
   );
 };

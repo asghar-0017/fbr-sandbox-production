@@ -10,6 +10,7 @@ import {
   Alert,
 } from "@mui/material";
 import { useTenant } from "../Context/TenantProvider";
+import Footer from "../component/Footer";
 
 const TenantLogin = () => {
   const [formData, setFormData] = useState({
@@ -143,6 +144,7 @@ const TenantLogin = () => {
           </Stack>
         </Box>
       </Paper>
+      <Footer />
     </Box>
   );
 };

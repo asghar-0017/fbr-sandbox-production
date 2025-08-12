@@ -72,12 +72,10 @@ export const createInvoice = async (req, res) => {
     // Enforce allowed statuses only
     const allowedStatuses = ["draft", "posted"];
     if (!allowedStatuses.includes(status)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid status. Allowed: 'draft', or 'posted'",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Allowed: 'draft', or 'posted'",
+      });
     }
 
     // Check if invoice number already exists (only if provided)
@@ -1220,7 +1218,7 @@ export const submitSavedInvoice = async (req, res) => {
     const { postData } = await import("../../service/FBRService.js");
 
     // Submit directly to FBR (skipping validation)
-    
+
     const postRes = await postData(
       "di_data/v1/di/postinvoicedata",
       fbrData,

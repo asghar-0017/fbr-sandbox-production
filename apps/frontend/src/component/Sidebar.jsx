@@ -36,6 +36,7 @@ import { Button, Chip } from "@mui/material";
 import { useAuth } from "../Context/AuthProvider";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
 import { FaBusinessTime } from "react-icons/fa6";
+import Footer from "./Footer";
 // import productionForm  from "../pages/productionForm"
 
 const drawerWidth = 240;
@@ -284,6 +285,7 @@ export default function Sidebar({ onLogout }) {
       <Main open={open}>
         <DrawerHeader />
         <Outlet />
+        <Footer />
       </Main>
     </Box>
   );

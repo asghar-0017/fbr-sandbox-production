@@ -186,6 +186,7 @@ const TenantManagement = () => {
                   justifyContent="space-between"
                   alignItems="flex-start"
                   mb={2}
+                  sx={{ gap: 3 }}
                 >
                   <Box display="flex" alignItems="center">
                     <BusinessIcon sx={{ mr: 1, color: "primary.main" }} />
@@ -198,6 +199,11 @@ const TenantManagement = () => {
                       label={tenant.is_active ? "Active" : "Inactive"}
                       color={tenant.is_active ? "success" : "default"}
                       size="small"
+                      sx={{
+                        width: "fit-content",
+                        minWidth: "60px",
+                        maxWidth: "80px",
+                      }}
                     />
                     {selectedTenant?.tenant_id === tenant.tenant_id && (
                       <Chip
@@ -213,6 +219,12 @@ const TenantManagement = () => {
                         }
                         size="small"
                         variant="outlined"
+                        sx={{
+                          width: "fit-content",
+                          fontSize: "10px",
+                          minWidth: "80px",
+                          maxWidth: "120px",
+                        }}
                       />
                     )}
                   </Box>

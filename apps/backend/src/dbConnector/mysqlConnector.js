@@ -43,14 +43,14 @@ const initializeAdminUser = async () => {
         password: hashedPassword,
         is_verify: true,
         role: 'admin'
-      });
+      })
 
       console.log('✅ Default admin user created');
     }
   } catch (error) {
     console.error('Error initializing admin user:', error);
   }
-};
+}
 
 // Graceful shutdown
 const gracefulShutdown = async () => {

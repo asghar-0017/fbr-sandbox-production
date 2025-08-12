@@ -910,6 +910,7 @@ export const printInvoice = async (req, res) => {
         invoice: plainInvoice,
         qrData,
         fbrLogoBase64,
+        companyLogoBase64,
         convertToWords: (amount) => {
           const words = toWords(Math.floor(amount || 0));
           return words.charAt(0).toUpperCase() + words.slice(1);

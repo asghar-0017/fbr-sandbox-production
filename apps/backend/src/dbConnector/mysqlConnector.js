@@ -60,7 +60,7 @@ const gracefulShutdown = async () => {
   } catch (error) {
     console.error('Error during graceful shutdown:', error);
   }
-};
+}
 
 // Handle process termination
 process.on('SIGINT', gracefulShutdown);

@@ -21,7 +21,7 @@ import buyerRoutes from './routes/buyerRoutes.js';
 import invoiceRoutes ,{ publicInvoiceRoutes } from './routes/invoiceRoutes.js';
 import hsCodeRoutes from './routes/hsCodeRoutes.js';
 
-dotenv.config();
+dotenv.config()
 
 const app = express();
 

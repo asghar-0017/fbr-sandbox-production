@@ -42,7 +42,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
-      "https://united-tubes.inplsoftwares.online",
+      "https://pak-progressive.inplsoftwares.online",
       "http://localhost:3000",
       "https://fbrtestcase.inplsoftwares.online",
       "*",

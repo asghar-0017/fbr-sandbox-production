@@ -5,11 +5,11 @@ dotenv.config();
 
 // Master database configuration
 export const masterConfig = {
-  host: process.env.MYSQL_HOST || '45.55.137.96',
-    port: process.env.MYSQL_PORT || 3306,
-    username: process.env.MYSQL_USER || 'fr_master_o',
-    password: process.env.MYSQL_PASSWORD || 'noLograt$5aion',
-  database: process.env.MYSQL_MASTER_DB || 'fr_master',
+  host: process.env.MYSQL_HOST ,
+    port: process.env.MYSQL_PORT ,
+    username: process.env.MYSQL_USER ,
+    password: process.env.MYSQL_PASSWORD ,
+  database: process.env.MYSQL_MASTER_DB,
   dialect: 'mysql',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
@@ -29,10 +29,10 @@ export const masterSequelize = new Sequelize(masterConfig);
 // Function to create tenant database connection
 export const createTenantConnection = (databaseName) => {
   return new Sequelize({
-    host: process.env.MYSQL_HOST || '45.55.137.96',
-    port: process.env.MYSQL_PORT || 3306,
-    username: process.env.MYSQL_USER || 'fr_master_o',
-    password: process.env.MYSQL_PASSWORD || 'noLograt$5aion',
+    host: process.env.MYSQL_HOST,
+    port: process.env.MYSQL_PORT ,
+    username: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD ,
     database: databaseName,
     dialect: 'mysql',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,

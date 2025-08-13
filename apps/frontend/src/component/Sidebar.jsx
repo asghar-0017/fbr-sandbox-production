@@ -170,15 +170,6 @@ export default function Sidebar({ onLogout }) {
               padding: "16px",
             }}
           >
-            <img
-              src={"/images/innovative.png"}
-              alt="Innovative Logo"
-              style={{
-                maxHeight: 50,
-                maxWidth: "80%",
-                objectFit: "contain",
-              }}
-            />
           </Box>
         </DrawerHeader>
         <List>

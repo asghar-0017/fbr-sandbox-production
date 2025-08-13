@@ -219,9 +219,30 @@ const TenantDashboard = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
-          Dashboard
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 1,
+          }}
+        >
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
+            Dashboard
+          </Typography>
+          {selectedTenant && (
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: "primary.main",
+                fontSize: "1.1rem",
+              }}
+            >
+              {selectedTenant.sellerBusinessName}
+            </Typography>
+          )}
+        </Box>
         <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
           Here's your invoice summary for this month.
         </Typography>

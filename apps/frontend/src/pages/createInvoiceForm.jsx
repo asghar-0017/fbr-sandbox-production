@@ -52,7 +52,7 @@ import { useTenantSelection } from "../Context/TenantSelectionProvider";
 import BuyerModal from "../component/BuyerModal";
 // import TenantDashboard from "../component/TenantDashboard";
 
-// Utility function to format numbers with commas
+// Utility function to format numbers with commas and 2 decimal places
 const formatNumberWithCommas = (value) => {
   if (!value || isNaN(parseFloat(value))) return "";
   const num = parseFloat(value);
@@ -69,17 +69,80 @@ const formatIntegerWithCommas = (value) => {
   return num.toLocaleString("en-US");
 };
 
-// Utility function to format editable numbers with commas but without decimals
+// Utility function to format editable numbers with commas and 2 decimal places
 const formatEditableNumberWithCommas = (value) => {
   if (!value || isNaN(parseFloat(value))) return "";
   const num = parseFloat(value);
-  return num.toLocaleString("en-US");
+  return num.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 // Utility function to remove commas and convert back to number
 const removeCommas = (value) => {
   if (!value) return "";
   return value.replace(/,/g, "");
+};
+
+// Enhanced utility function for handling floating number inputs with natural typing
+const handleFloatingNumberInput = (value, allowEmpty = true) => {
+  // Allow empty string when deleting all content
+  if (value === "" && allowEmpty) {
+    return "";
+  }
+
+  // Remove existing commas to get the raw number for validation
+  const rawValue = value.replace(/,/g, "");
+
+  // Allow natural decimal number input including:
+  // - Numbers: 123
+  // - Decimals: 123.45, .45, 123.
+  // - Leading decimal: .5
+  const decimalPattern = /^(\d*\.?\d*)$/;
+
+  if (decimalPattern.test(rawValue)) {
+    return rawValue; // Return raw value without commas for internal storage
+  }
+
+  return null; // Invalid input, don't update
+};
+
+// Format decimal number with commas and max 2 decimal places (only on blur)
+const formatDecimalOnBlur = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  // Remove commas before parsing to avoid parseFloat issues
+  const cleanValue = value.replace(/,/g, "");
+  const numValue = parseFloat(cleanValue);
+  if (isNaN(numValue)) {
+    return "";
+  }
+
+  // Format with commas and 2 decimal places
+  return numValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+// Format number with commas while typing (for display only)
+const formatWithCommasWhileTyping = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  // Handle decimal point cases
+  if (value.includes(".")) {
+    const [integerPart, decimalPart] = value.split(".");
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${formattedInteger}.${decimalPart}`;
+  } else {
+    // Format integer part with commas
+    return value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
 };
 
 export default function CreateInvoice() {
@@ -164,13 +227,19 @@ export default function CreateInvoice() {
           "createInvoiceForm: Loading timeout reached - tokens still not loaded after 10 seconds"
         );
         setLoadingTimeout(true);
+
+        // Automatically retry token fetch when timeout is reached
+        if (retryTokenFetch) {
+          console.log("Automatically retrying token fetch due to timeout");
+          retryTokenFetch();
+        }
       }, 10000); // 10 seconds timeout
 
       return () => clearTimeout(timeout);
     } else {
       setLoadingTimeout(false);
     }
-  }, [tokensLoaded, selectedTenant]);
+  }, [tokensLoaded, selectedTenant, retryTokenFetch]);
 
   // Hide Submit button whenever form data changes after a successful validation
   React.useEffect(() => {
@@ -272,7 +341,10 @@ export default function CreateInvoice() {
                   unitPrice: item.unitPrice
                     ? parseFloat(item.unitPrice).toFixed(2)
                     : "0.00", // This will be recalculated from retail price
-                  retailPrice: item.retailPrice || "0",
+                  retailPrice:
+                    item.retailPrice ||
+                    item.fixedNotifiedValueOrRetailPrice ||
+                    "0",
                   totalValues: item.totalValues || "0",
                   valueSalesExcludingST: item.valueSalesExcludingST || "0",
                   salesTaxApplicable: item.salesTaxApplicable || "0",
@@ -332,6 +404,20 @@ export default function CreateInvoice() {
 
         // Set the transactionTypeId and other required data for editing
         const scenarioId = invoiceData.scenario_id || invoiceData.scenarioId;
+
+        // Also set transactionTypeId directly from transctypeId if available
+        const directTransctypeId =
+          invoiceData.transctypeId ||
+          invoiceData.scenario_id ||
+          invoiceData.scenarioId;
+        if (directTransctypeId) {
+          localStorage.setItem("transactionTypeId", directTransctypeId);
+          setTransactionTypeId(directTransctypeId);
+          console.log(
+            "Set transactionTypeId directly from transctypeId:",
+            directTransctypeId
+          );
+        }
         if (scenarioId) {
           // Set transactionTypeId based on scenario
           let transactionTypeId = null;
@@ -540,9 +626,21 @@ export default function CreateInvoice() {
     // Debug token manager state
     debugTokenManager();
 
-    // Don't make API calls if tokens are not loaded yet
-    if (!selectedTenant || !tokensLoaded) {
-      console.log("Skipping API calls - tokens not loaded yet");
+    // Don't make API calls if tenant is not selected
+    if (!selectedTenant) {
+      console.log("Skipping API calls - no tenant selected");
+      setAllLoading(false);
+      return;
+    }
+
+    // Check if we have a token available (either from context or localStorage fallback)
+    const token =
+      API_CONFIG.getCurrentToken("sandbox") ||
+      localStorage.getItem("sandboxProductionToken");
+    if (!token) {
+      console.log(
+        "Skipping API calls - no token available, waiting for token to load"
+      );
       setAllLoading(false);
       return;
     }
@@ -609,20 +707,77 @@ export default function CreateInvoice() {
             const data = await getTransactionTypes();
             console.log("Transaction types from API:", data);
 
+            // Handle different possible response structures
+            let transactionTypesArray = [];
+
             if (Array.isArray(data)) {
+              transactionTypesArray = data;
               console.log("Setting transaction types with array data:", data);
-              setTransactionTypes(data);
             } else if (data && typeof data === "object") {
-              // If it's a single object, wrap it in an array
-              console.log(
-                "Setting transaction types with single object wrapped in array:",
-                [data]
-              );
-              setTransactionTypes([data]);
-            } else {
-              console.error("Unexpected data format:", data);
-              setTransactionTypes([]);
+              // Check if data is wrapped in a response object
+              if (data.data && Array.isArray(data.data)) {
+                transactionTypesArray = data.data;
+                console.log(
+                  "Setting transaction types from data.data:",
+                  data.data
+                );
+              } else if (
+                data.transactionTypes &&
+                Array.isArray(data.transactionTypes)
+              ) {
+                transactionTypesArray = data.transactionTypes;
+                console.log(
+                  "Setting transaction types from data.transactionTypes:",
+                  data.transactionTypes
+                );
+              } else if (data.results && Array.isArray(data.results)) {
+                transactionTypesArray = data.results;
+                console.log(
+                  "Setting transaction types from data.results:",
+                  data.results
+                );
+              } else {
+                // If it's a single object, wrap it in an array
+                transactionTypesArray = [data];
+                console.log(
+                  "Setting transaction types with single object wrapped in array:",
+                  [data]
+                );
+              }
             }
+
+            // Log the structure of the first item
+            if (transactionTypesArray.length > 0) {
+              console.log(
+                "First transaction type structure:",
+                transactionTypesArray[0]
+              );
+              console.log(
+                "Available keys in first item:",
+                Object.keys(transactionTypesArray[0])
+              );
+
+              // Check for different possible property names
+              const firstItem = transactionTypesArray[0];
+              const possibleIdKeys = [
+                "transactioN_TYPE_ID",
+                "transactionTypeId",
+                "transaction_type_id",
+                "transactionTypeID",
+                "id",
+                "typeId",
+                "transTypeId",
+              ];
+
+              console.log("Checking for ID property names:");
+              possibleIdKeys.forEach((key) => {
+                if (firstItem.hasOwnProperty(key)) {
+                  console.log(`Found property "${key}":`, firstItem[key]);
+                }
+              });
+            }
+
+            setTransactionTypes(transactionTypesArray);
           } catch (error) {
             console.error("Error fetching transaction types:", error);
             setTransactionTypes([]);
@@ -646,21 +801,181 @@ export default function CreateInvoice() {
         console.log(
           "Consider using the 'Retry Loading Credentials' button if data doesn't load"
         );
+      } else {
+        // Token is available, clear any loading timeout
+        setLoadingTimeout(false);
       }
     }
   }, [selectedTenant, tokensLoaded]);
+
+  // Monitor token availability and start loading data when token is available
+  useEffect(() => {
+    if (selectedTenant) {
+      const token =
+        API_CONFIG.getCurrentToken("sandbox") ||
+        localStorage.getItem("sandboxProductionToken");
+      if (token && !allLoading && !tokensLoaded) {
+        console.log(
+          "Token available but tokensLoaded is false, starting data loading"
+        );
+        // Trigger the data loading effect
+        const timer = setTimeout(() => {
+          console.log("Starting API calls after token availability check");
+          setAllLoading(true);
+
+          Promise.allSettled([
+            fetchData("pdi/v1/provinces").then((response) => {
+              setProvince(response);
+              localStorage.setItem(
+                "provinceResponse",
+                JSON.stringify(response)
+              );
+            }),
+            // HS codes will be loaded by OptimizedHSCodeSelector component with caching
+            Promise.resolve([]),
+            (async () => {
+              try {
+                const token = API_CONFIG.getCurrentToken("sandbox");
+                console.log(
+                  "Token for doctypecode API:",
+                  token ? "Available" : "Not available"
+                );
+
+                if (!token) {
+                  console.error("No token available for doctypecode API");
+                  setInvoiceTypes([
+                    { docTypeId: 4, docDescription: "Sale Invoice" },
+                    { docTypeId: 9, docDescription: "Debit Note" },
+                  ]);
+                  return;
+                }
+
+                const response = await fetch(
+                  "https://gw.fbr.gov.pk/pdi/v1/doctypecode",
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+
+                if (response.ok) {
+                  const data = await response.json();
+                  setInvoiceTypes(data);
+                } else {
+                  console.error(
+                    "Doctypecode API failed with status:",
+                    response.status
+                  );
+                  setInvoiceTypes([
+                    { docTypeId: 4, docDescription: "Sale Invoice" },
+                    { docTypeId: 9, docDescription: "Debit Note" },
+                  ]);
+                }
+              } catch (error) {
+                console.error("Error fetching doctypecode:", error);
+                setInvoiceTypes([
+                  { docTypeId: 4, docDescription: "Sale Invoice" },
+                  { docTypeId: 9, docDescription: "Debit Note" },
+                ]);
+              }
+            })(),
+            (async () => {
+              try {
+                const data = await getTransactionTypes();
+                console.log("Transaction types from API:", data);
+
+                // Handle different possible response structures
+                let transactionTypesArray = [];
+
+                if (Array.isArray(data)) {
+                  transactionTypesArray = data;
+                  console.log(
+                    "Setting transaction types with array data:",
+                    data
+                  );
+                } else if (data && typeof data === "object") {
+                  // Check if data is wrapped in a response object
+                  if (data.data && Array.isArray(data.data)) {
+                    transactionTypesArray = data.data;
+                    console.log(
+                      "Setting transaction types from data.data:",
+                      data.data
+                    );
+                  } else if (
+                    data.transactionTypes &&
+                    Array.isArray(data.transactionTypes)
+                  ) {
+                    transactionTypesArray = data.transactionTypes;
+                    console.log(
+                      "Setting transaction types from data.transactionTypes:",
+                      data.transactionTypes
+                    );
+                  } else if (data.results && Array.isArray(data.results)) {
+                    transactionTypesArray = data.results;
+                    console.log(
+                      "Setting transaction types from data.results:",
+                      data.results
+                    );
+                  } else {
+                    // If it's a single object, wrap it in an array
+                    transactionTypesArray = [data];
+                    console.log(
+                      "Setting transaction types with single object wrapped in array:",
+                      [data]
+                    );
+                  }
+                }
+
+                // Log the structure of the first item
+                if (transactionTypesArray.length > 0) {
+                  console.log(
+                    "First transaction type structure:",
+                    transactionTypesArray[0]
+                  );
+                  console.log(
+                    "Available keys in first item:",
+                    Object.keys(transactionTypesArray[0])
+                  );
+
+                  // Check for different possible property names
+                  const firstItem = transactionTypesArray[0];
+                  const possibleIdKeys = [
+                    "transactioN_TYPE_ID",
+                    "transactionTypeId",
+                    "transaction_type_id",
+                    "transactionTypeID",
+                    "id",
+                    "typeId",
+                    "transTypeId",
+                  ];
+
+                  console.log("Checking for ID property names:");
+                  possibleIdKeys.forEach((key) => {
+                    if (firstItem.hasOwnProperty(key)) {
+                      console.log(`Found property "${key}":`, firstItem[key]);
+                    }
+                  });
+                }
+
+                setTransactionTypes(transactionTypesArray);
+              } catch (error) {
+                console.error("Error fetching transaction types:", error);
+                setTransactionTypes([]);
+              }
+            })(),
+          ]).finally(() => setAllLoading(false));
+        }, 100);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [selectedTenant, allLoading, tokensLoaded]);
 
   // Handle editing when scenario data is loaded
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
     const currentTransctypeId = formData.transctypeId;
 
-    if (
-      isEditing &&
-      currentTransctypeId &&
-      transactionTypes.length > 0 &&
-      !transactionTypeId
-    ) {
+    if (isEditing && currentTransctypeId && transactionTypes.length > 0) {
       console.log(
         "Editing mode detected with transaction types data loaded, setting transactionTypeId for:",
         currentTransctypeId
@@ -678,7 +993,28 @@ export default function CreateInvoice() {
         );
       }
     }
-  }, [transactionTypes, formData.transctypeId, transactionTypeId]);
+  }, [transactionTypes, formData.transctypeId]);
+
+  // Additional fallback for setting transactionTypeId during editing
+  useEffect(() => {
+    const isEditing = localStorage.getItem("editingInvoice") === "true";
+    const currentTransctypeId = formData.transctypeId;
+    const storedTransactionTypeId = localStorage.getItem("transactionTypeId");
+
+    if (isEditing && currentTransctypeId && !transactionTypeId) {
+      // Try to set from stored value first, then from form data
+      const newTransactionTypeId =
+        storedTransactionTypeId || currentTransctypeId;
+
+      if (newTransactionTypeId) {
+        setTransactionTypeId(newTransactionTypeId);
+        console.log(
+          "Fallback: Set transactionTypeId for editing:",
+          newTransactionTypeId
+        );
+      }
+    }
+  }, [formData.transctypeId, transactionTypeId]);
 
   useEffect(() => {
     const fetchBuyers = async () => {
@@ -1190,17 +1526,46 @@ export default function CreateInvoice() {
   };
 
   const proceedWithTransactionTypeChange = (transctypeId) => {
+    // Helper function to get the ID from a transaction type object
+    const getTransactionTypeId = (type) => {
+      return (
+        type.transactioN_TYPE_ID ||
+        type.transactionTypeId ||
+        type.transaction_type_id ||
+        type.transactionTypeID ||
+        type.id ||
+        type.typeId ||
+        type.transTypeId
+      );
+    };
+
+    // Helper function to get the description from a transaction type object
+    const getTransactionTypeDesc = (type) => {
+      return (
+        type.transactioN_DESC ||
+        type.transactionDesc ||
+        type.description ||
+        type.desc ||
+        type.name
+      );
+    };
+
     // Find the selected transaction type from the API data
-    const selectedTransactionType = transactionTypes.find(
-      (item) => item.transactioN_TYPE_ID === transctypeId
-    );
+    const selectedTransactionType = transactionTypes.find((item) => {
+      const typeId = getTransactionTypeId(item);
+      return (
+        typeId === transctypeId ||
+        typeId === String(transctypeId) ||
+        typeId === Number(transctypeId)
+      );
+    });
 
     if (!selectedTransactionType) {
       console.error("Selected transaction type not found in API data");
       return;
     }
 
-    const saleType = selectedTransactionType.transactioN_DESC || "";
+    const saleType = getTransactionTypeDesc(selectedTransactionType) || "";
 
     console.log("Selected transaction type:", selectedTransactionType);
     console.log("Sale type:", saleType);
@@ -2458,7 +2823,7 @@ export default function CreateInvoice() {
         <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
           {loadingTimeout
             ? "Loading is taking longer than expected..."
-            : "Loading Company credentials..."}
+            : "Loading data from FBR..."}
         </Typography>
         <Button variant="outlined" onClick={retryTokenFetch} sx={{ mt: 2 }}>
           Retry Loading Credentials
@@ -2800,19 +3165,102 @@ export default function CreateInvoice() {
             <Box>
               <Autocomplete
                 options={transactionTypes}
-                getOptionLabel={(option) =>
-                  typeof option === "string"
-                    ? option
-                    : `${option.transactioN_TYPE_ID} - ${option.transactioN_DESC}`
-                }
-                value={
-                  transactionTypes.find(
-                    (type) => type.transactioN_TYPE_ID === formData.transctypeId
-                  ) || null
-                }
+                getOptionLabel={(option) => {
+                  if (typeof option === "string") return option;
+
+                  const getTransactionTypeId = (type) => {
+                    return (
+                      type.transactioN_TYPE_ID ||
+                      type.transactionTypeId ||
+                      type.transaction_type_id ||
+                      type.transactionTypeID ||
+                      type.id ||
+                      type.typeId ||
+                      type.transTypeId
+                    );
+                  };
+
+                  const getTransactionTypeDesc = (type) => {
+                    return (
+                      type.transactioN_DESC ||
+                      type.transactionDesc ||
+                      type.description ||
+                      type.desc ||
+                      type.name
+                    );
+                  };
+
+                  return `${getTransactionTypeId(option)} - ${getTransactionTypeDesc(option)}`;
+                }}
+                value={(() => {
+                  const effectiveId =
+                    transactionTypeId || formData.transctypeId;
+
+                  // Helper function to get the ID from a transaction type object
+                  const getTransactionTypeId = (type) => {
+                    return (
+                      type.transactioN_TYPE_ID ||
+                      type.transactionTypeId ||
+                      type.transaction_type_id ||
+                      type.transactionTypeID ||
+                      type.id ||
+                      type.typeId ||
+                      type.transTypeId
+                    );
+                  };
+
+                  // Helper function to get the description from a transaction type object
+                  const getTransactionTypeDesc = (type) => {
+                    return (
+                      type.transactioN_DESC ||
+                      type.transactionDesc ||
+                      type.description ||
+                      type.desc ||
+                      type.name
+                    );
+                  };
+
+                  // Try to find the matching transaction type
+                  const foundType = transactionTypes.find((type) => {
+                    const typeId = getTransactionTypeId(type);
+                    return (
+                      typeId === effectiveId ||
+                      typeId === String(effectiveId) ||
+                      typeId === Number(effectiveId)
+                    );
+                  });
+
+                  console.log("Autocomplete value calculation:", {
+                    transactionTypeId,
+                    formDataTransctypeId: formData.transctypeId,
+                    effectiveId,
+                    effectiveIdType: typeof effectiveId,
+                    foundType,
+                    transactionTypesLength: transactionTypes.length,
+                    transactionTypesSample: transactionTypes
+                      .slice(0, 3)
+                      .map((t) => ({
+                        id: getTransactionTypeId(t),
+                        idType: typeof getTransactionTypeId(t),
+                        desc: getTransactionTypeDesc(t),
+                      })),
+                  });
+                  return foundType || null;
+                })()}
                 onChange={(event, newValue) => {
                   if (newValue) {
-                    handleTransactionTypeChange(newValue.transactioN_TYPE_ID);
+                    const getTransactionTypeId = (type) => {
+                      return (
+                        type.transactioN_TYPE_ID ||
+                        type.transactionTypeId ||
+                        type.transaction_type_id ||
+                        type.transactionTypeID ||
+                        type.id ||
+                        type.typeId ||
+                        type.transTypeId
+                      );
+                    };
+                    handleTransactionTypeChange(getTransactionTypeId(newValue));
                   } else {
                     handleTransactionTypeChange("");
                   }
@@ -2829,9 +3277,22 @@ export default function CreateInvoice() {
                     }}
                   />
                 )}
-                isOptionEqualToValue={(option, value) =>
-                  option.transactioN_TYPE_ID === value.transactioN_TYPE_ID
-                }
+                isOptionEqualToValue={(option, value) => {
+                  const getTransactionTypeId = (type) => {
+                    return (
+                      type.transactioN_TYPE_ID ||
+                      type.transactionTypeId ||
+                      type.transaction_type_id ||
+                      type.transactionTypeID ||
+                      type.id ||
+                      type.typeId ||
+                      type.transTypeId
+                    );
+                  };
+                  return (
+                    getTransactionTypeId(option) === getTransactionTypeId(value)
+                  );
+                }}
                 freeSolo
                 selectOnFocus
                 clearOnBlur={false}
@@ -3013,6 +3474,90 @@ export default function CreateInvoice() {
                   mb: 1,
                 }}
               >
+                <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Total Price"
+                    type="text"
+                    value={
+                      item.retailPrice === "0.00" || item.retailPrice === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.retailPrice)
+                    }
+                    onChange={(e) => {
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "retailPrice", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "retailPrice",
+                            numValue.toString()
+                          );
+                        }
+                      }
+                    }}
+                    variant="outlined"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "#e5e7eb" },
+                      },
+                      "& .MuiInputLabel-root": { color: "#6b7280" },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Qty"
+                    type="text"
+                    value={
+                      item.quantity === "0.00"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.quantity)
+                    } // Show empty instead of 0.00
+                    onChange={(e) => {
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "quantity", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "quantity",
+                            numValue.toString()
+                          );
+                        }
+                      }
+                    }}
+                    variant="outlined"
+                  />
+                </Box>
                 <TextField
                   fullWidth
                   size="small"
@@ -3032,54 +3577,6 @@ export default function CreateInvoice() {
                     },
                   }}
                 />
-                <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Qty"
-                    type="text"
-                    value={formatIntegerWithCommas(item.quantity)}
-                    onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers
-                      if (value === "" || /^\d*$/.test(value)) {
-                        handleItemChange(index, "quantity", value);
-                      }
-                    }}
-                    variant="outlined"
-                  />
-                </Box>
-                <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Total Price"
-                    type="text"
-                    value={formatEditableNumberWithCommas(item.retailPrice)}
-                    onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        handleItemChange(index, "retailPrice", value);
-                      }
-                    }}
-                    onBlur={(e) => {
-                      // Format to 2 decimal places when leaving the field
-                      const value = removeCommas(e.target.value);
-                      if (value && !isNaN(parseFloat(value))) {
-                        const formattedValue = parseFloat(value).toFixed(2);
-                        handleItemChange(index, "retailPrice", formattedValue);
-                      }
-                    }}
-                    variant="outlined"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": { borderColor: "#e5e7eb" },
-                      },
-                      "& .MuiInputLabel-root": { color: "#6b7280" },
-                    }}
-                  />
-                </Box>
                 <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
                   <TextField
                     fullWidth
@@ -3128,18 +3625,41 @@ export default function CreateInvoice() {
                     size="small"
                     label="ST Withheld at Source"
                     type="text"
-                    value={formatEditableNumberWithCommas(
-                      item.salesTaxWithheldAtSource
-                    )}
+                    value={
+                      item.salesTaxWithheldAtSource === "0.00" ||
+                      item.salesTaxWithheldAtSource === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(
+                            item.salesTaxWithheldAtSource
+                          )
+                    }
                     onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
                         handleItemChange(
                           index,
                           "salesTaxWithheldAtSource",
-                          value
+                          newValue
                         );
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "salesTaxWithheldAtSource",
+                            numValue.toString()
+                          );
+                        }
                       }
                     }}
                     variant="outlined"
@@ -3151,12 +3671,34 @@ export default function CreateInvoice() {
                     size="small"
                     label="Extra Tax"
                     type="text"
-                    value={formatEditableNumberWithCommas(item.extraTax)}
+                    value={
+                      item.extraTax === "0.00" || item.extraTax === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.extraTax)
+                    }
                     onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        handleItemChange(index, "extraTax", value);
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "extraTax", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "extraTax",
+                            numValue.toString()
+                          );
+                        }
                       }
                     }}
                     variant="outlined"
@@ -3168,12 +3710,34 @@ export default function CreateInvoice() {
                     size="small"
                     label="Further Tax"
                     type="text"
-                    value={formatEditableNumberWithCommas(item.furtherTax)}
+                    value={
+                      item.furtherTax === "0.00" || item.furtherTax === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.furtherTax)
+                    }
                     onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        handleItemChange(index, "furtherTax", value);
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "furtherTax", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "furtherTax",
+                            numValue.toString()
+                          );
+                        }
                       }
                     }}
                     variant="outlined"
@@ -3185,12 +3749,34 @@ export default function CreateInvoice() {
                     size="small"
                     label="FED Payable"
                     type="text"
-                    value={formatEditableNumberWithCommas(item.fedPayable)}
+                    value={
+                      item.fedPayable === "0.00" || item.fedPayable === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.fedPayable)
+                    }
                     onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        handleItemChange(index, "fedPayable", value);
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "fedPayable", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "fedPayable",
+                            numValue.toString()
+                          );
+                        }
                       }
                     }}
                     variant="outlined"
@@ -3202,12 +3788,34 @@ export default function CreateInvoice() {
                     size="small"
                     label="Discount"
                     type="text"
-                    value={formatEditableNumberWithCommas(item.discount)}
+                    value={
+                      item.discount === "0.00" || item.discount === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.discount)
+                    }
                     onChange={(e) => {
-                      const value = removeCommas(e.target.value);
-                      // Allow only numbers and decimal points
-                      if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                        handleItemChange(index, "discount", value);
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "discount", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        // Remove commas and get the raw numeric value
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          // Store the raw numeric value, not the formatted one
+                          handleItemChange(
+                            index,
+                            "discount",
+                            numValue.toString()
+                          );
+                        }
                       }
                     }}
                     variant="outlined"
@@ -3390,13 +3998,13 @@ export default function CreateInvoice() {
                           {item.uoM}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
-                          {item.quantity}
+                          {formatNumberWithCommas(item.quantity)}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
-                          {parseFloat(item.unitPrice || 0).toFixed(2)}
+                          {formatNumberWithCommas(item.unitPrice)}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
-                          {parseFloat(item.totalValues || 0).toFixed(2)}
+                          {formatNumberWithCommas(item.totalValues)}
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: "flex", gap: 1 }}>
@@ -3540,7 +4148,8 @@ export default function CreateInvoice() {
             )}
           </Box>
         </Box>
-        {allLoading && (
+        {(allLoading ||
+          (selectedTenant && !tokensLoaded && !loadingTimeout)) && (
           <Box
             sx={{
               position: "fixed",

@@ -328,7 +328,7 @@ export const getTransactionTypes = async () => {
       method: "GET",
       url: "https://gw.fbr.gov.pk/pdi/v1/transtypecode",
       headers: config.headers,
-      timeout: 10000, // 10 second timeout
+      timeout: 100000, // 10 second timeout
     });
 
     console.log("FBR Transaction Types API Response:", response.data);

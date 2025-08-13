@@ -42,7 +42,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
-      "https://test-instance.inplsoftwares.online",
+      "https://signs-now.inplsoftwares.online",
       "http://localhost:3000",
       "https://fbrtestcase.inplsoftwares.online",
       "*",

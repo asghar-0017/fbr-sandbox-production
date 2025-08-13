@@ -98,4 +98,8 @@ const startServer = async () => {
   }
 };
 
+<<<<<<< HEAD
 export default startServer;
+=======
+export default startServer
+>>>>>>> d4107cd28898ed1f833c1d8e3cfc907346facd1c

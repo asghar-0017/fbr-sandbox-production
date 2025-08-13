@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../API/Api";
 import BuyerModal from "../component/BuyerModal";
+import BuyerUploader from "../component/BuyerUploader";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import BuyerTable from "../component/BuyerTable";
@@ -13,6 +14,7 @@ const Buyers = () => {
   const [buyers, setBuyers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
   const [selectedBuyer, setSelectedBuyer] = useState(null);
   const [filter, setFilter] = useState("All");
 
@@ -24,6 +26,14 @@ const Buyers = () => {
   const closeModal = () => {
     setSelectedBuyer(null);
     setIsModalOpen(false);
+  };
+
+  const openUploader = () => {
+    setIsUploaderOpen(true);
+  };
+
+  const closeUploader = () => {
+    setIsUploaderOpen(false);
   };
 
   const handleSave = async (buyerData) => {
@@ -103,6 +113,69 @@ const Buyers = () => {
     }
   };
 
+  const handleBulkUpload = async (buyersData) => {
+    try {
+      const response = await api.post(
+        `/tenant/${selectedTenant.tenant_id}/buyers/bulk`,
+        { buyers: buyersData }
+      );
+
+      // Add the newly created buyers to the current list
+      const newBuyers = response.data.data.created;
+      setBuyers([...buyers, ...newBuyers]);
+
+      // Show success message with details
+      const { summary, errors } = response.data.data;
+      if (summary.failed > 0) {
+        // Show detailed error information
+        const errorDetails = errors.slice(0, 5).map(err => 
+          `Row ${err.row}: ${err.error}`
+        ).join('\n');
+        
+        if (errors.length > 5) {
+          errorDetails += `\n... and ${errors.length - 5} more errors`;
+        }
+        
+        toast.warning(
+          `Upload completed with issues: ${summary.successful} buyers added, ${summary.failed} failed. Check the details for more information.`,
+          {
+            autoClose: 8000,
+            closeOnClick: false,
+            pauseOnHover: true
+          }
+        );
+        
+        // Log detailed errors to console for debugging
+        console.error('Upload errors:', errors);
+      } else {
+        toast.success(
+          `Successfully uploaded ${summary.successful} buyers! All buyers have been added to your system.`
+        );
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error("Error in bulk upload:", error);
+      
+      let errorMessage = "Error uploading buyers.";
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          errorMessage = data.message || "Invalid data provided. Please check your file format.";
+        } else if (status === 500) {
+          errorMessage = "Server error occurred. Please try again later.";
+        } else {
+          errorMessage = data.message || "An error occurred while uploading buyers.";
+        }
+      }
+      
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
   const handleDelete = async (buyerId) => {
     Swal.fire({
       title: "Are you sure?",
@@ -174,12 +247,19 @@ const Buyers = () => {
           onEdit={openModal}
           onDelete={handleDelete}
           onAdd={openModal}
+          onUpload={openUploader}
         />
         <BuyerModal
           isOpen={isModalOpen}
           onClose={closeModal}
           onSave={handleSave}
           buyer={selectedBuyer}
+        />
+        <BuyerUploader
+          isOpen={isUploaderOpen}
+          onClose={closeUploader}
+          onUpload={handleBulkUpload}
+          selectedTenant={selectedTenant}
         />
       </div>
     </TenantSelectionPrompt>

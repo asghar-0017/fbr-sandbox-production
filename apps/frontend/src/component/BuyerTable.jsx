@@ -25,6 +25,7 @@ export default function BuyerTable({
   onEdit,
   onDelete,
   onAdd,
+  onUpload,
 }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -158,6 +159,14 @@ export default function BuyerTable({
               Buyer Management
             </Typography>
             <Box sx={{ flexGrow: 1 }} />
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={() => onUpload()}
+              sx={{ mr: 1 }}
+            >
+              Upload CSV
+            </Button>
             <Button variant="contained" color="primary" onClick={() => onAdd()}>
               Add Buyer
             </Button>

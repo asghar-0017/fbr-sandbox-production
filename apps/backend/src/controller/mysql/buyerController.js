@@ -273,4 +273,326 @@ export const getBuyersByProvince = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Bulk create buyers
+export const bulkCreateBuyers = async (req, res) => {
+  try {
+    const { Buyer } = req.tenantModels;
+    const { buyers } = req.body;
+
+    if (!Array.isArray(buyers) || buyers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Buyers array is required and must not be empty'
+      });
+    }
+
+    // Limit the number of buyers that can be uploaded at once
+    if (buyers.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 1000 buyers can be uploaded at once'
+      });
+    }
+
+    const results = {
+      created: [],
+      errors: [],
+      total: buyers.length
+    };
+
+    // Process each buyer
+    for (let i = 0; i < buyers.length; i++) {
+      const buyerData = buyers[i];
+      
+      console.log(`Processing buyer ${i + 1}:`, {
+        buyerNTNCNIC: buyerData.buyerNTNCNIC,
+        buyerBusinessName: buyerData.buyerBusinessName,
+        buyerProvince: buyerData.buyerProvince,
+        buyerRegistrationType: buyerData.buyerRegistrationType
+      });
+      
+      try {
+        // Validate required fields
+        if (!buyerData.buyerProvince || !buyerData.buyerProvince.trim()) {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Province is required'
+          });
+          continue;
+        }
+
+        if (!buyerData.buyerRegistrationType || !buyerData.buyerRegistrationType.trim()) {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Registration Type is required'
+          });
+          continue;
+        }
+
+        // Validate province - accept both uppercase and title case
+        const validProvinces = [
+          'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 
+          'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir',
+          'PUNJAB', 'SINDH', 'KHYBER PAKHTUNKHWA', 'BALOCHISTAN', 
+          'ISLAMABAD CAPITAL TERRITORY', 'GILGIT-BALTISTAN', 'AZAD KASHMIR'
+        ];
+        if (!validProvinces.includes(buyerData.buyerProvince.trim())) {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Invalid province. Valid provinces are: Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan, Azad Kashmir'
+          });
+          continue;
+        }
+
+        // Validate registration type
+        const validRegistrationTypes = ['Registered', 'Unregistered'];
+        if (!validRegistrationTypes.includes(buyerData.buyerRegistrationType.trim())) {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Registration Type must be "Registered" or "Unregistered"'
+          });
+          continue;
+        }
+
+        // Validate NTN/CNIC format if provided
+        if (buyerData.buyerNTNCNIC && buyerData.buyerNTNCNIC.trim()) {
+          const ntnCnic = buyerData.buyerNTNCNIC.trim();
+          if (ntnCnic.length < 7 || ntnCnic.length > 15) {
+            results.errors.push({
+              index: i,
+              row: i + 1,
+              error: 'NTN/CNIC should be between 7-15 characters'
+            });
+            continue;
+          }
+        }
+
+        // Check if buyer with same NTN already exists
+        if (buyerData.buyerNTNCNIC && buyerData.buyerNTNCNIC.trim()) {
+          const existingBuyer = await Buyer.findOne({
+            where: { buyerNTNCNIC: buyerData.buyerNTNCNIC.trim() }
+          });
+
+          if (existingBuyer) {
+            results.errors.push({
+              index: i,
+              row: i + 1,
+              error: `Buyer with NTN/CNIC "${buyerData.buyerNTNCNIC}" already exists in database`
+            });
+            continue;
+          }
+        }
+
+        // Check for duplicate NTN within the same upload batch
+        if (buyerData.buyerNTNCNIC && buyerData.buyerNTNCNIC.trim()) {
+          const duplicateInBatch = results.created.find(
+            createdBuyer => createdBuyer.buyerNTNCNIC === buyerData.buyerNTNCNIC.trim()
+          );
+          
+          if (duplicateInBatch) {
+            results.errors.push({
+              index: i,
+              row: i + 1,
+              error: `Duplicate NTN/CNIC "${buyerData.buyerNTNCNIC}" found in upload file`
+            });
+            continue;
+          }
+        }
+
+        // Normalize province to title case
+        const normalizeProvince = (province) => {
+          const provinceMap = {
+            'PUNJAB': 'Punjab',
+            'SINDH': 'Sindh',
+            'KHYBER PAKHTUNKHWA': 'Khyber Pakhtunkhwa',
+            'BALOCHISTAN': 'Balochistan',
+            'ISLAMABAD CAPITAL TERRITORY': 'Islamabad Capital Territory',
+            'GILGIT-BALTISTAN': 'Gilgit-Baltistan',
+            'AZAD KASHMIR': 'Azad Kashmir'
+          };
+          return provinceMap[province.trim()] || province.trim();
+        };
+
+        // Create buyer with trimmed values
+        const buyer = await Buyer.create({
+          buyerNTNCNIC: buyerData.buyerNTNCNIC ? buyerData.buyerNTNCNIC.trim() : null,
+          buyerBusinessName: buyerData.buyerBusinessName ? buyerData.buyerBusinessName.trim() : null,
+          buyerProvince: normalizeProvince(buyerData.buyerProvince),
+          buyerAddress: buyerData.buyerAddress ? buyerData.buyerAddress.trim() : null,
+          buyerRegistrationType: buyerData.buyerRegistrationType.trim()
+        });
+
+        console.log(`Successfully created buyer ${i + 1}:`, buyer.toJSON());
+        results.created.push(buyer);
+      } catch (error) {
+        console.error(`Error creating buyer at index ${i}:`, error);
+        console.error(`Buyer data that failed:`, buyerData);
+        
+        // Handle specific database errors
+        if (error.name === 'SequelizeValidationError') {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Validation error: ' + error.errors.map(e => e.message).join(', ')
+          });
+        } else if (error.name === 'SequelizeUniqueConstraintError') {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: 'Duplicate NTN/CNIC found'
+          });
+        } else {
+          results.errors.push({
+            index: i,
+            row: i + 1,
+            error: error.message || 'Unknown error occurred'
+          });
+        }
+      }
+    }
+
+    // Log final summary
+    console.log('=== Bulk Upload Summary ===');
+    console.log(`Total buyers processed: ${results.total}`);
+    console.log(`Successfully created: ${results.created.length}`);
+    console.log(`Failed: ${results.errors.length}`);
+    
+    if (results.errors.length > 0) {
+      console.log('Errors:');
+      results.errors.forEach((error, index) => {
+        console.log(`  ${index + 1}. Row ${error.row}: ${error.error}`);
+      });
+    }
+    console.log('=== End Summary ===');
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk upload completed. ${results.created.length} buyers created, ${results.errors.length} errors.`,
+      data: {
+        created: results.created,
+        errors: results.errors,
+        summary: {
+          total: results.total,
+          successful: results.created.length,
+          failed: results.errors.length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in bulk create buyers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing bulk buyer upload',
+      error: error.message
+    });
+  }
+}; 
+
+// Check existing buyers for preview
+export const checkExistingBuyers = async (req, res) => {
+  try {
+    const { Buyer } = req.tenantModels;
+    const { buyers } = req.body;
+
+    if (!Array.isArray(buyers) || buyers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Buyers array is required and must not be empty'
+      });
+    }
+
+    // Limit the number of buyers that can be checked at once
+    if (buyers.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 1000 buyers can be checked at once'
+      });
+    }
+
+    const results = {
+      existing: [],
+      new: [],
+      total: buyers.length
+    };
+
+    // Extract all NTN/CNIC values for batch checking
+    const ntnCnicValues = buyers
+      .map((buyer, index) => ({ 
+        ntnCnic: buyer.buyerNTNCNIC?.trim(), 
+        index,
+        buyerData: buyer 
+      }))
+      .filter(item => item.ntnCnic); // Only check buyers with NTN/CNIC
+
+    if (ntnCnicValues.length > 0) {
+      // Batch query to find existing buyers
+      const existingBuyers = await Buyer.findAll({
+        where: {
+          buyerNTNCNIC: ntnCnicValues.map(item => item.ntnCnic)
+        },
+        attributes: ['buyerNTNCNIC', 'buyerBusinessName']
+      });
+
+      const existingNtnCnicSet = new Set(existingBuyers.map(buyer => buyer.buyerNTNCNIC));
+
+      // Categorize buyers
+      buyers.forEach((buyer, index) => {
+        const ntnCnic = buyer.buyerNTNCNIC?.trim();
+        
+        if (ntnCnic && existingNtnCnicSet.has(ntnCnic)) {
+          const existingBuyer = existingBuyers.find(b => b.buyerNTNCNIC === ntnCnic);
+          results.existing.push({
+            index,
+            row: index + 1,
+            buyerData: buyer,
+            existingBuyer: {
+              buyerNTNCNIC: existingBuyer.buyerNTNCNIC,
+              buyerBusinessName: existingBuyer.buyerBusinessName
+            }
+          });
+        } else {
+          results.new.push({
+            index,
+            row: index + 1,
+            buyerData: buyer
+          });
+        }
+      });
+    } else {
+      // If no NTN/CNIC values, all buyers are considered new
+      buyers.forEach((buyer, index) => {
+        results.new.push({
+          index,
+          row: index + 1,
+          buyerData: buyer
+        });
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        existing: results.existing,
+        new: results.new,
+        summary: {
+          total: results.total,
+          existing: results.existing.length,
+          new: results.new.length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error checking existing buyers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking existing buyers',
+      error: error.message
+    });
+  }
 }; 

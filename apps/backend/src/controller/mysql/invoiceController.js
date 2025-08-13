@@ -284,7 +284,8 @@ export const saveInvoice = async (req, res) => {
         });
       } else {
         // Generate a temporary invoice number for draft
-        const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// Generate a temporary invoice number for draft
+        const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         // Generate system invoice ID
         const systemInvoiceId = await generateSystemInvoiceId(Invoice);
 
@@ -420,7 +421,7 @@ export const saveAndValidateInvoice = async (req, res) => {
     } = req.body;
 
     // Generate a temporary invoice number for saved invoice
-    const tempInvoiceNumber = `SAVED_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempInvoiceNumber = `SAVED_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
     // Validate the data first (basic validation)
     const validationErrors = [];

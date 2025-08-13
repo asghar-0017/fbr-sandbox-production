@@ -11,6 +11,8 @@ router.use(identifyTenant);
 
 // Buyer management routes (tenant-specific)
 router.post('/buyers', buyerController.createBuyer);
+router.post('/buyers/bulk', buyerController.bulkCreateBuyers);
+router.post('/buyers/check-existing', buyerController.checkExistingBuyers);
 router.get('/buyers', buyerController.getAllBuyers);
 router.get('/buyers/:id', buyerController.getBuyerById);
 router.put('/buyers/:id', buyerController.updateBuyer);

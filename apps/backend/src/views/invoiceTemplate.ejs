@@ -125,6 +125,11 @@
           <%= invoice.fbr_invoice_number %>
         </p>
       <% } %>
+      <% if (invoice.companyInvoiceRefNo) { %>
+        <p style="font-size: 10px; color: #666; font-style: italic;"><strong>Company Invoice Ref No:</strong>
+          <%= invoice.companyInvoiceRefNo %>
+        </p>
+      <% } %>
     </div>
     <div class="invoice-info">
       <p><strong>Date:</strong>

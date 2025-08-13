@@ -249,14 +249,14 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
               <Typography variant="body2">
                 <strong>Invoice #:</strong> {invoice.invoiceNumber}
               </Typography>
+              <Typography variant="body2">
+                <strong>Company Invoice Ref No:</strong>{" "}
+                {invoice.companyInvoiceRefNo || "N/A"}
+              </Typography>
             </Box>
             <Box className="section">
               <Typography variant="body2">
                 <strong>Date:</strong> {invoice.invoiceDate}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Company Invoice Ref No:</strong>{" "}
-                {invoice.companyInvoiceRefNo || "N/A"}
               </Typography>
             </Box>
           </Box>

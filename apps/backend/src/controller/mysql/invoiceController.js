@@ -57,6 +57,7 @@ export const createInvoice = async (req, res) => {
       buyerAddress,
       buyerRegistrationType,
       invoiceRefNo,
+      companyInvoiceRefNo,
       transctypeId,
       items,
       status = "posted",
@@ -115,6 +116,7 @@ export const createInvoice = async (req, res) => {
           buyerAddress,
           buyerRegistrationType,
           invoiceRefNo,
+          companyInvoiceRefNo,
           transctypeId,
           status: "posted", // Always set as posted when using createInvoice
           fbr_invoice_number,
@@ -171,7 +173,6 @@ export const createInvoice = async (req, res) => {
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
-            billOfLadingUoM: cleanValue(item.billOfLadingUoM),
           };
 
           // Only include extraTax when it's a positive value (> 0)
@@ -238,6 +239,7 @@ export const saveInvoice = async (req, res) => {
       buyerAddress,
       buyerRegistrationType,
       invoiceRefNo,
+      companyInvoiceRefNo,
       transctypeId,
       items,
     } = req.body;
@@ -270,6 +272,7 @@ export const saveInvoice = async (req, res) => {
             buyerAddress,
             buyerRegistrationType,
             invoiceRefNo,
+            companyInvoiceRefNo,
             transctypeId,
             status: "draft",
             fbr_invoice_number: null,
@@ -284,7 +287,7 @@ export const saveInvoice = async (req, res) => {
         });
       } else {
         // Generate a temporary invoice number for draft
-// Generate a temporary invoice number for draft
+        // Generate a temporary invoice number for draft
         const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         // Generate system invoice ID
         const systemInvoiceId = await generateSystemInvoiceId(Invoice);
@@ -305,6 +308,7 @@ export const saveInvoice = async (req, res) => {
             buyerAddress,
             buyerRegistrationType,
             invoiceRefNo,
+            companyInvoiceRefNo,
             transctypeId,
             status: "draft",
             fbr_invoice_number: null,
@@ -360,7 +364,6 @@ export const saveInvoice = async (req, res) => {
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
-            billOfLadingUoM: cleanValue(item.billOfLadingUoM),
           };
 
           // Only include extraTax when it's a positive value (> 0)
@@ -416,6 +419,7 @@ export const saveAndValidateInvoice = async (req, res) => {
       buyerAddress,
       buyerRegistrationType,
       invoiceRefNo,
+      companyInvoiceRefNo,
       transctypeId,
       items,
     } = req.body;
@@ -495,6 +499,7 @@ export const saveAndValidateInvoice = async (req, res) => {
             buyerAddress,
             buyerRegistrationType,
             invoiceRefNo,
+            companyInvoiceRefNo,
             transctypeId,
             status: "draft",
             fbr_invoice_number: null,
@@ -525,6 +530,7 @@ export const saveAndValidateInvoice = async (req, res) => {
             buyerAddress,
             buyerRegistrationType,
             invoiceRefNo,
+            companyInvoiceRefNo,
             transctypeId,
             status: "draft",
             fbr_invoice_number: null,
@@ -577,7 +583,6 @@ export const saveAndValidateInvoice = async (req, res) => {
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
-            billOfLadingUoM: cleanValue(item.billOfLadingUoM),
           };
 
           // Only include extraTax when it's a positive value (> 0)
@@ -722,6 +727,7 @@ export const getAllInvoices = async (req, res) => {
         invoiceRefNo: plainInvoice.invoiceRefNo,
         transctypeId: plainInvoice.transctypeId,
         status: plainInvoice.status,
+        companyInvoiceRefNo: plainInvoice.companyInvoiceRefNo,
         fbr_invoice_number: plainInvoice.fbr_invoice_number,
         items: (plainInvoice.InvoiceItems || []).map((item) => ({
           ...item,
@@ -798,6 +804,7 @@ export const getInvoiceById = async (req, res) => {
       invoiceRefNo: plainInvoice.invoiceRefNo,
       transctypeId: plainInvoice.transctypeId,
       status: plainInvoice.status,
+      companyInvoiceRefNo: plainInvoice.companyInvoiceRefNo,
       fbr_invoice_number: plainInvoice.fbr_invoice_number,
       items: (plainInvoice.InvoiceItems || []).map((item) => ({
         ...item,
@@ -1175,10 +1182,45 @@ export const submitSavedInvoice = async (req, res) => {
       // FBR expects camelCase key: transctypeId
       transctypeId: cleanValue(invoice.transctypeId),
       items: invoice.InvoiceItems.map((item) => {
+        // Handle RS. rate format for FBR submission
+        let processedRate = cleanValue(item.rate);
+        console.log(
+          `Processing rate for item ${item.id}: Original="${item.rate}", Cleaned="${processedRate}"`
+        );
+
+        if (
+          processedRate &&
+          (processedRate.includes("RS.") ||
+            processedRate.includes("rs.") ||
+            processedRate.includes("Rs."))
+        ) {
+          // For RS. format, we need to convert it to a format FBR accepts
+          // Extract the numeric value and set it as a standard rate
+          const numericValue =
+            parseFloat(processedRate.replace(/RS\./i, "").trim()) || 0;
+
+          // Check the sales type to determine the appropriate rate
+          const saleType = cleanValue(item.saleType) || "";
+          if (saleType.includes("Reduced Rate")) {
+            processedRate = 12; // Use reduced rate for FBR
+          } else if (
+            saleType.includes("zero-rate") ||
+            saleType.includes("Zero")
+          ) {
+            processedRate = 0; // Use zero rate for FBR
+          } else {
+            processedRate = 17; // Use standard rate for FBR
+          }
+
+          console.log(
+            `RS. rate detected and converted: "${item.rate}" -> "${processedRate}" (using ${saleType} rate for FBR, fixed amount: ${numericValue})`
+          );
+        }
+
         const baseItem = {
           hsCode: cleanValue(item.hsCode),
           productDescription: cleanValue(item.productDescription),
-          rate: cleanValue(item.rate),
+          rate: processedRate,
           uoM: cleanValue(item.uoM),
           quantity: cleanNumericValue(item.quantity),
           unitPrice: cleanNumericValue(item.unitPrice),
@@ -1197,7 +1239,6 @@ export const submitSavedInvoice = async (req, res) => {
           discount: cleanNumericValue(item.discount),
           saleType: cleanValue(item.saleType),
           sroItemSerialNo: cleanValue(item.sroItemSerialNo),
-          billOfLadingUoM: cleanValue(item.billOfLadingUoM),
         };
 
         // Only include extraTax when it's a positive value (> 0) and not applicable for reduced/exempt
@@ -1225,6 +1266,14 @@ export const submitSavedInvoice = async (req, res) => {
       "Cleaned FBR data being sent:",
       JSON.stringify(fbrData, null, 2)
     );
+
+    // Additional debug: Log rate processing summary
+    console.log("Rate processing summary:");
+    fbrData.items.forEach((item, index) => {
+      console.log(
+        `  Item ${index + 1}: rate="${item.rate}", salesTaxApplicable="${item.salesTaxApplicable}", saleType="${item.saleType}"`
+      );
+    });
 
     // Get tenant FBR token from the tenant middleware
     if (!req.tenant || !req.tenant.sandboxTestToken) {
@@ -1428,6 +1477,514 @@ export const submitSavedInvoice = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error submitting invoice to FBR",
+      error: error.message,
+    });
+  }
+};
+
+// Bulk create invoices with items (draft status)
+export const bulkCreateInvoices = async (req, res) => {
+  try {
+    const { Invoice, InvoiceItem } = req.tenantModels;
+    const { invoices } = req.body;
+
+    if (!Array.isArray(invoices) || invoices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invoices array is required and must not be empty",
+      });
+    }
+
+    // Limit the number of invoices that can be uploaded at once
+    if (invoices.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Maximum 1000 invoices can be uploaded at once",
+      });
+    }
+
+    const results = {
+      created: [],
+      errors: [],
+      total: invoices.length,
+    };
+
+    // Group invoices by row index since invoice_number will be generated by system
+    const invoiceGroups = {};
+    for (let i = 0; i < invoices.length; i++) {
+      const invoiceData = invoices[i];
+      // Generate a unique key for each row since invoice_number will be auto-generated
+      const rowKey = `row_${i}`;
+
+      if (!invoiceGroups[rowKey]) {
+        invoiceGroups[rowKey] = {
+          header: invoiceData,
+          items: [],
+          rowNumbers: [],
+        };
+      }
+
+      // Extract item data if present
+      const itemData = {};
+      const itemFields = [
+        "item_hsCode",
+        "item_productDescription",
+        "item_rate",
+        "item_uoM",
+        "item_quantity",
+        "item_unitPrice",
+        "item_totalValues",
+        "item_valueSalesExcludingST",
+        "item_fixedNotifiedValueOrRetailPrice",
+        "item_salesTaxApplicable",
+        "item_salesTaxWithheldAtSource",
+        "item_extraTax",
+        "item_furtherTax",
+        "item_sroScheduleNo",
+        "item_fedPayable",
+        "item_discount",
+        "item_saleType",
+        "item_sroItemSerialNo",
+      ];
+
+      let hasItemData = false;
+      itemFields.forEach((field) => {
+        const cleanField = field.replace("item_", "");
+        if (
+          invoiceData[field] !== undefined &&
+          invoiceData[field] !== null &&
+          invoiceData[field] !== ""
+        ) {
+          itemData[cleanField] = invoiceData[field];
+          hasItemData = true;
+        }
+      });
+
+      if (hasItemData) {
+        invoiceGroups[rowKey].items.push(itemData);
+      }
+      invoiceGroups[rowKey].rowNumbers.push(i + 1);
+    }
+
+    // Process each unique invoice
+    for (const [rowKey, group] of Object.entries(invoiceGroups)) {
+      try {
+        const invoiceData = group.header;
+
+        console.log(`Processing invoice row ${rowKey}:`, {
+          invoiceType: invoiceData.invoiceType,
+          sellerBusinessName: invoiceData.sellerBusinessName,
+          buyerBusinessName: invoiceData.buyerBusinessName,
+          itemsCount: group.items.length,
+        });
+
+        // Validate required fields
+        if (!invoiceData.invoiceType || !invoiceData.invoiceType.trim()) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Invoice type is required",
+            });
+          });
+          continue;
+        }
+
+        if (!invoiceData.invoiceDate || !invoiceData.invoiceDate.trim()) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Invoice date is required",
+            });
+          });
+          continue;
+        }
+
+        if (
+          !invoiceData.sellerBusinessName ||
+          !invoiceData.sellerBusinessName.trim()
+        ) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Seller business name is required",
+            });
+          });
+          continue;
+        }
+
+        if (!invoiceData.sellerProvince || !invoiceData.sellerProvince.trim()) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Seller province is required",
+            });
+          });
+          continue;
+        }
+
+        if (
+          !invoiceData.buyerBusinessName ||
+          !invoiceData.buyerBusinessName.trim()
+        ) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Buyer business name is required",
+            });
+          });
+          continue;
+        }
+
+        if (!invoiceData.buyerProvince || !invoiceData.buyerProvince.trim()) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Buyer province is required",
+            });
+          });
+          continue;
+        }
+
+        // Validate invoice type
+        const validInvoiceTypes = ["Sale Invoice", "Debit Note"];
+        if (!validInvoiceTypes.includes(invoiceData.invoiceType.trim())) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: 'Invoice type must be "Sale Invoice" or "Debit Note"',
+            });
+          });
+          continue;
+        }
+
+        // Validate date format
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(invoiceData.invoiceDate.trim())) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Invoice date must be in YYYY-MM-DD format",
+            });
+          });
+          continue;
+        }
+
+        // Validate provinces
+        const validProvinces = [
+          "Balochistan",
+          "Azad Jammu and Kashmir",
+          "Capital Territory",
+          "Punjab",
+          "Khyber Pakhtunkhwa",
+          "Gilgit Baltistan",
+          "Sindh",
+          "BALOCHISTAN",
+          "AZAD JAMMU AND KASHMIR",
+          "CAPITAL TERRITORY",
+          "PUNJAB",
+          "KHYBER PAKHTUNKHWA",
+          "GILGIT BALTISTAN",
+          "SINDH",
+        ];
+
+        if (!validProvinces.includes(invoiceData.sellerProvince.trim())) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error:
+                "Invalid seller province. Valid provinces are: Balochistan, Azad Jammu and Kashmir, Capital Territory, Punjab, Khyber Pakhtunkhwa, Gilgit Baltistan, Sindh",
+            });
+          });
+          continue;
+        }
+
+        if (!validProvinces.includes(invoiceData.buyerProvince.trim())) {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error:
+                "Invalid buyer province. Valid provinces are: Balochistan, Azad Jammu and Kashmir, Capital Territory, Punjab, Khyber Pakhtunkhwa, Gilgit Baltistan, Sindh",
+            });
+          });
+          continue;
+        }
+
+        // Validate buyer registration type if provided
+        if (
+          invoiceData.buyerRegistrationType &&
+          invoiceData.buyerRegistrationType.trim()
+        ) {
+          const validRegistrationTypes = ["Registered", "Unregistered"];
+          if (
+            !validRegistrationTypes.includes(
+              invoiceData.buyerRegistrationType.trim()
+            )
+          ) {
+            group.rowNumbers.forEach((rowNum) => {
+              results.errors.push({
+                index: group.rowNumbers.indexOf(rowNum),
+                row: rowNum,
+                error:
+                  'Buyer registration type must be "Registered" or "Unregistered"',
+              });
+            });
+            continue;
+          }
+        }
+
+        // Generate a temporary invoice number for draft (will be replaced when posted to FBR)
+        const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+        // Normalize provinces to title case
+        const normalizeProvince = (province) => {
+          const provinceMap = {
+            PUNJAB: "Punjab",
+            SINDH: "Sindh",
+            "KHYBER PAKHTUNKHWA": "Khyber Pakhtunkhwa",
+            BALOCHISTAN: "Balochistan",
+            "CAPITAL TERRITORY": "Capital Territory",
+            "GILGIT BALTISTAN": "Gilgit Baltistan",
+            "AZAD JAMMU AND KASHMIR": "Azad Jammu and Kashmir",
+          };
+          return provinceMap[province.trim()] || province.trim();
+        };
+
+        // Create invoice with transaction to handle items
+        const result = await req.tenantDb.transaction(async (t) => {
+          // Generate system invoice ID
+          const systemInvoiceId = await generateSystemInvoiceId(Invoice);
+
+          // Create invoice with draft status
+          const invoice = await Invoice.create(
+            {
+              invoice_number: tempInvoiceNumber,
+              system_invoice_id: systemInvoiceId,
+              invoiceType: invoiceData.invoiceType.trim(),
+              invoiceDate: invoiceData.invoiceDate.trim(),
+              sellerNTNCNIC: invoiceData.sellerNTNCNIC
+                ? invoiceData.sellerNTNCNIC.trim()
+                : null,
+              sellerBusinessName: invoiceData.sellerBusinessName.trim(),
+              sellerProvince: normalizeProvince(invoiceData.sellerProvince),
+              sellerAddress: invoiceData.sellerAddress
+                ? invoiceData.sellerAddress.trim()
+                : null,
+              buyerNTNCNIC: invoiceData.buyerNTNCNIC
+                ? invoiceData.buyerNTNCNIC.trim()
+                : null,
+              buyerBusinessName: invoiceData.buyerBusinessName.trim(),
+              buyerProvince: normalizeProvince(invoiceData.buyerProvince),
+              buyerAddress: invoiceData.buyerAddress
+                ? invoiceData.buyerAddress.trim()
+                : null,
+              buyerRegistrationType: invoiceData.buyerRegistrationType
+                ? invoiceData.buyerRegistrationType.trim()
+                : null,
+              invoiceRefNo: invoiceData.invoiceRefNo
+                ? invoiceData.invoiceRefNo.trim()
+                : null,
+              companyInvoiceRefNo: invoiceData.companyInvoiceRefNo
+                ? invoiceData.companyInvoiceRefNo.trim()
+                : null,
+              transctypeId: invoiceData.transctypeId
+                ? invoiceData.transctypeId.trim()
+                : null,
+              status: "draft", // Always set as draft for bulk upload
+              fbr_invoice_number: null,
+            },
+            { transaction: t }
+          );
+
+          // Create invoice items if provided
+          if (group.items && group.items.length > 0) {
+            const invoiceItems = group.items.map((item) => {
+              // Helper function to convert empty strings to null
+              const cleanValue = (value) => {
+                if (
+                  value === "" ||
+                  value === "N/A" ||
+                  value === null ||
+                  value === undefined
+                ) {
+                  return null;
+                }
+                return value;
+              };
+
+              // Helper function to convert numeric strings to numbers
+              const cleanNumericValue = (value) => {
+                const cleaned = cleanValue(value);
+                if (cleaned === null) return null;
+                const num = parseFloat(cleaned);
+                return isNaN(num) ? null : num;
+              };
+
+              const mappedItem = {
+                invoice_id: invoice.id,
+                hsCode: cleanValue(item.hsCode),
+                productDescription: cleanValue(item.productDescription),
+                rate: cleanValue(item.rate),
+                uoM: cleanValue(item.uoM),
+                quantity: cleanNumericValue(item.quantity),
+                unitPrice: cleanNumericValue(item.unitPrice),
+                totalValues: cleanNumericValue(item.totalValues),
+                valueSalesExcludingST: cleanNumericValue(
+                  item.valueSalesExcludingST
+                ),
+                fixedNotifiedValueOrRetailPrice: cleanNumericValue(
+                  item.fixedNotifiedValueOrRetailPrice
+                ),
+                salesTaxApplicable: cleanNumericValue(item.salesTaxApplicable),
+                salesTaxWithheldAtSource: cleanNumericValue(
+                  item.salesTaxWithheldAtSource
+                ),
+                furtherTax: cleanNumericValue(item.furtherTax),
+                sroScheduleNo: cleanValue(item.sroScheduleNo),
+                fedPayable: cleanNumericValue(item.fedPayable),
+                discount: cleanNumericValue(item.discount),
+                saleType: cleanValue(item.saleType),
+                sroItemSerialNo: cleanValue(item.sroItemSerialNo),
+              };
+
+              // Only include extraTax when it's a positive value (> 0)
+              const extraTaxValue = cleanNumericValue(item.extraTax);
+              if (extraTaxValue !== null && Number(extraTaxValue) > 0) {
+                mappedItem.extraTax = extraTaxValue;
+              }
+
+              return mappedItem;
+            });
+
+            await InvoiceItem.bulkCreate(invoiceItems, { transaction: t });
+          }
+
+          return invoice;
+        });
+
+        console.log(
+          `Successfully created invoice ${tempInvoiceNumber} with ${group.items.length} items:`,
+          result.toJSON()
+        );
+        results.created.push(result);
+      } catch (error) {
+        console.error(`Error creating invoice ${tempInvoiceNumber}:`, error);
+        console.error(`Invoice data that failed:`, group.header);
+
+        // Handle specific database errors
+        if (error.name === "SequelizeValidationError") {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error:
+                "Validation error: " +
+                error.errors.map((e) => e.message).join(", "),
+            });
+          });
+        } else if (error.name === "SequelizeUniqueConstraintError") {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: "Duplicate invoice number found",
+            });
+          });
+        } else {
+          group.rowNumbers.forEach((rowNum) => {
+            results.errors.push({
+              index: group.rowNumbers.indexOf(rowNum),
+              row: rowNum,
+              error: error.message || "Unknown error occurred",
+            });
+          });
+        }
+      }
+    }
+
+    // Log final summary
+    console.log("=== Bulk Invoice Upload Summary ===");
+    console.log(`Total invoices processed: ${results.total}`);
+    console.log(`Successfully created: ${results.created.length}`);
+    console.log(`Failed: ${results.errors.length}`);
+
+    if (results.errors.length > 0) {
+      console.log("Errors:");
+      results.errors.forEach((error, index) => {
+        console.log(`  ${index + 1}. Row ${error.row}: ${error.error}`);
+      });
+    }
+    console.log("=== End Summary ===");
+
+    res.status(200).json({
+      success: true,
+      message: `Bulk upload completed. ${results.created.length} invoices created as drafts with auto-generated invoice numbers, ${results.errors.length} errors.`,
+      data: {
+        created: results.created,
+        errors: results.errors,
+        summary: {
+          total: results.total,
+          successful: results.created.length,
+          failed: results.errors.length,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in bulk create invoices:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error processing bulk invoice upload",
+      error: error.message,
+    });
+  }
+};
+
+// Check existing invoices for preview
+export const checkExistingInvoices = async (req, res) => {
+  try {
+    const { Invoice } = req.tenantModels;
+    const { invoices } = req.body;
+
+    if (!Array.isArray(invoices) || invoices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invoices array is required and must not be empty",
+      });
+    }
+
+    const existing = [];
+    const newInvoices = [];
+
+    for (let i = 0; i < invoices.length; i++) {
+      const invoiceData = invoices[i];
+      // Since invoice numbers will be generated by the system, all invoices are treated as new
+      newInvoices.push({
+        row: i + 1,
+        invoiceData: invoiceData,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        existing: existing,
+        new: newInvoices,
+      },
+    });
+  } catch (error) {
+    console.error("Error checking existing invoices:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error checking existing invoices",
       error: error.message,
     });
   }

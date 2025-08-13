@@ -48,34 +48,34 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
   // Expected columns for buyer data
   const expectedColumns = [
     "buyerNTNCNIC",
-    "buyerBusinessName", 
+    "buyerBusinessName",
     "buyerProvince",
     "buyerAddress",
-    "buyerRegistrationType"
+    "buyerRegistrationType",
   ];
 
   const downloadTemplate = () => {
-    const headers = expectedColumns.join(',');
+    const headers = expectedColumns.join(",");
     const sampleData = [
-      '1234567890123,ABC Trading Company,PUNJAB,123 Main Street Lahore,Registered',
-      '9876543210987,XYZ Import Export,SINDH,456 Business Avenue Karachi,Unregistered',
-      '4567891230456,Global Traders Ltd,KHYBER PAKHTUNKHWA,789 Commerce Road Peshawar,Registered',
-      '7891234560789,Metro Traders,BALOCHISTAN,321 Industrial Zone Quetta,Registered',
-      '3216549870321,Capital Enterprises,ISLAMABAD CAPITAL TERRITORY,654 Blue Area Islamabad,Unregistered',
-      '6543219870654,Mountain Traders,GILGIT-BALTISTAN,123 Valley Road Gilgit,Registered'
+      "1234567890123,ABC Trading Company,PUNJAB,123 Main Street Lahore,Registered",
+      "9876543210987,XYZ Import Export,SINDH,456 Business Avenue Karachi,Unregistered",
+      "4567891230456,Global Traders Ltd,KHYBER PAKHTUNKHWA,789 Commerce Road Peshawar,Registered",
+      "7891234560789,Metro Traders,BALOCHISTAN,321 Industrial Zone Quetta,Registered",
+      "3216549870321,Capital Enterprises,ISLAMABAD CAPITAL TERRITORY,654 Blue Area Islamabad,Unregistered",
+      "6543219870654,Mountain Traders,GILGIT-BALTISTAN,123 Valley Road Gilgit,Registered",
     ];
-    
-    const csvContent = [headers, ...sampleData].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+
+    const csvContent = [headers, ...sampleData].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'buyer_template.csv';
+    a.download = "buyer_template.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
+
     toast.success("Template downloaded successfully!");
   };
 
@@ -105,7 +105,7 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ];
-    
+
     if (!validTypes.includes(selectedFile.type)) {
       toast.error("Please select a valid CSV or Excel file");
       return;
@@ -135,59 +135,67 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
   const parseFileContent = (content, fileType) => {
     if (fileType === "text/csv") {
       // Improved CSV parsing with better handling of quoted fields
-      const lines = content.split('\n').filter(line => line.trim());
-      
+      const lines = content.split("\n").filter((line) => line.trim());
+
       if (lines.length < 2) {
-        throw new Error("CSV file must have at least a header row and one data row");
+        throw new Error(
+          "CSV file must have at least a header row and one data row"
+        );
       }
-      
+
       // Parse headers
       const headers = parseCSVLine(lines[0]);
-      
+
       // Validate headers
-      const missingHeaders = expectedColumns.filter(col => !headers.includes(col));
+      const missingHeaders = expectedColumns.filter(
+        (col) => !headers.includes(col)
+      );
       if (missingHeaders.length > 0) {
-        throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
+        throw new Error(
+          `Missing required columns: ${missingHeaders.join(", ")}`
+        );
       }
-      
+
       const data = [];
-      
+
       for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim()) {
           const values = parseCSVLine(lines[i]);
           const row = {};
-          
+
           headers.forEach((header, index) => {
-            row[header] = values[index] || '';
+            row[header] = values[index] || "";
           });
-          
+
           // Only include expected columns
           const filteredRow = {};
-          expectedColumns.forEach(col => {
-            filteredRow[col] = row[col] || '';
+          expectedColumns.forEach((col) => {
+            filteredRow[col] = row[col] || "";
           });
-          
+
           data.push(filteredRow);
         }
       }
-      
+
       return data;
     } else {
       // For Excel files, we'll use a simple approach
       // In a real implementation, you'd use a library like xlsx
-      toast.error("Excel file parsing requires additional setup. Please use CSV format for now.");
+      toast.error(
+        "Excel file parsing requires additional setup. Please use CSV format for now."
+      );
       return [];
     }
   };
 
   const parseCSVLine = (line) => {
     const result = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
+
       if (char === '"') {
         if (inQuotes && line[i + 1] === '"') {
           // Escaped quote
@@ -197,18 +205,18 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
           // Toggle quote state
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         // End of field
         result.push(current.trim());
-        current = '';
+        current = "";
       } else {
         current += char;
       }
     }
-    
+
     // Add the last field
     result.push(current.trim());
-    
+
     return result;
   };
 
@@ -218,12 +226,12 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
 
     data.forEach((row, index) => {
       const rowErrors = [];
-      
+
       // Check required fields
       if (!row.buyerProvince || !row.buyerProvince.trim()) {
         rowErrors.push("Province is required");
       }
-      
+
       if (!row.buyerRegistrationType || !row.buyerRegistrationType.trim()) {
         rowErrors.push("Registration Type is required");
       }
@@ -234,10 +242,10 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
         if (ntnCnic.length < 7 || ntnCnic.length > 15) {
           rowErrors.push("NTN/CNIC should be between 7-15 characters");
         }
-        
+
         // Check for duplicate NTN/CNIC within the same file
         const duplicateIndex = validData.findIndex(
-          item => item.buyerNTNCNIC && item.buyerNTNCNIC.trim() === ntnCnic
+          (item) => item.buyerNTNCNIC && item.buyerNTNCNIC.trim() === ntnCnic
         );
         if (duplicateIndex !== -1) {
           rowErrors.push("Duplicate NTN/CNIC found in file");
@@ -246,23 +254,38 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
 
       // Validate province (common Pakistani provinces)
       const validProvinces = [
-        'PUNJAB', 'SINDH', 'KHYBER PAKHTUNKHWA', 'BALOCHISTAN', 
-        'ISLAMABAD CAPITAL TERRITORY', 'GILGIT-BALTISTAN', 'AZAD KASHMIR'
+        "BALOCHISTAN",
+        "AZAD JAMMU AND KASHMIR",
+        "CAPITAL TERRITORY",
+        "PUNJAB",
+        "KHYBER PAKHTUNKHWA",
+        "GILGIT BALTISTAN",
+        "SINDH",
       ];
-      if (row.buyerProvince && !validProvinces.includes(row.buyerProvince.trim())) {
-        rowErrors.push("Invalid province. Use: PUNJAB, SINDH, KHYBER PAKHTUNKHWA, BALOCHISTAN, etc.");
+      if (
+        row.buyerProvince &&
+        !validProvinces.includes(row.buyerProvince.trim())
+      ) {
+        rowErrors.push(
+          "Invalid province. Use: BALOCHISTAN, AZAD JAMMU AND KASHMIR, CAPITAL TERRITORY, PUNJAB, KHYBER PAKHTUNKHWA, GILGIT BALTISTAN, SINDH"
+        );
       }
 
       // Validate registration type
-      const validRegistrationTypes = ['Registered', 'Unregistered'];
-      if (row.buyerRegistrationType && !validRegistrationTypes.includes(row.buyerRegistrationType.trim())) {
-        rowErrors.push("Registration Type must be 'Registered' or 'Unregistered'");
+      const validRegistrationTypes = ["Registered", "Unregistered"];
+      if (
+        row.buyerRegistrationType &&
+        !validRegistrationTypes.includes(row.buyerRegistrationType.trim())
+      ) {
+        rowErrors.push(
+          "Registration Type must be 'Registered' or 'Unregistered'"
+        );
       }
 
       if (rowErrors.length > 0) {
         validationErrors.push({
           row: index + 2, // +2 because of 0-based index and header row
-          errors: rowErrors
+          errors: rowErrors,
         });
       } else {
         validData.push(row);
@@ -296,11 +319,15 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
       setNewBuyers(newBuyersData);
 
       if (existing.length > 0) {
-        toast.info(`${existing.length} buyers already exist and will be skipped during upload`);
+        toast.info(
+          `${existing.length} buyers already exist and will be skipped during upload`
+        );
       }
     } catch (error) {
       console.error("Error checking existing buyers:", error);
-      toast.error("Error checking existing buyers. Preview may not be accurate.");
+      toast.error(
+        "Error checking existing buyers. Preview may not be accurate."
+      );
     } finally {
       setCheckingExisting(false);
     }
@@ -315,32 +342,40 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
     setUploading(true);
     try {
       // Only upload new buyers
-      const buyersToUpload = newBuyers.map(item => item.buyerData);
+      const buyersToUpload = newBuyers.map((item) => item.buyerData);
       const result = await onUpload(buyersToUpload);
-      
+
       // Check if there were any errors in the upload
-      if (result && result.data && result.data.data && result.data.data.summary) {
+      if (
+        result &&
+        result.data &&
+        result.data.data &&
+        result.data.data.summary
+      ) {
         const { summary, errors } = result.data.data;
-        
+
         if (summary.failed > 0) {
           // Show detailed error information
-          const errorDetails = errors.slice(0, 10).map(err => 
-            `Row ${err.row}: ${err.error}`
-          ).join('\n');
-          
+          const errorDetails = errors
+            .slice(0, 10)
+            .map((err) => `Row ${err.row}: ${err.error}`)
+            .join("\n");
+
           if (errors.length > 10) {
             errorDetails += `\n... and ${errors.length - 10} more errors`;
           }
-          
+
           // Show error details in an alert
-          alert(`Upload completed with issues:\n\n${summary.successful} buyers added successfully\n${summary.failed} buyers failed\n\nError details:\n${errorDetails}`);
+          alert(
+            `Upload completed with issues:\n\n${summary.successful} buyers added successfully\n${summary.failed} buyers failed\n\nError details:\n${errorDetails}`
+          );
         } else {
           toast.success(`Successfully uploaded ${summary.successful} buyers!`);
         }
       } else {
         toast.success(`Successfully uploaded ${buyersToUpload.length} buyers`);
       }
-      
+
       handleClose();
     } catch (error) {
       console.error("Upload error:", error);
@@ -358,7 +393,7 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
     setExistingBuyers([]);
     setNewBuyers([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
     onClose();
   };
@@ -370,33 +405,33 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
     setExistingBuyers([]);
     setNewBuyers([]);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   // Create a combined preview data with status indicators
   const getCombinedPreviewData = () => {
     const combined = [];
-    
+
     // Add existing buyers with status
-    existingBuyers.forEach(item => {
+    existingBuyers.forEach((item) => {
       combined.push({
         ...item.buyerData,
-        _status: 'existing',
+        _status: "existing",
         _existingBuyer: item.existingBuyer,
-        _row: item.row
+        _row: item.row,
       });
     });
-    
+
     // Add new buyers with status
-    newBuyers.forEach(item => {
+    newBuyers.forEach((item) => {
       combined.push({
         ...item.buyerData,
-        _status: 'new',
-        _row: item.row
+        _status: "new",
+        _row: item.row,
       });
     });
-    
+
     // Sort by original row order
     return combined.sort((a, b) => a._row - b._row);
   };
@@ -411,14 +446,15 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
           </IconButton>
         </Box>
       </DialogTitle>
-      
+
       <DialogContent>
         <Box sx={{ mb: 3 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Upload a CSV file with the following columns: buyerNTNCNIC, buyerBusinessName, 
-            buyerProvince, buyerAddress, buyerRegistrationType
+            Upload a CSV file with the following columns: buyerNTNCNIC,
+            buyerBusinessName, buyerProvince, buyerAddress,
+            buyerRegistrationType
           </Typography>
-          
+
           {/* Download Template Button */}
           <Box sx={{ mb: 2 }}>
             <Button
@@ -430,7 +466,7 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
               Download CSV Template
             </Button>
           </Box>
-          
+
           {/* File Upload Area */}
           <Paper
             variant="outlined"
@@ -456,10 +492,12 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
               onChange={handleFileSelect}
               style={{ display: "none" }}
             />
-            
+
             {!file ? (
               <Box>
-                <CloudUpload sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+                <CloudUpload
+                  sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+                />
                 <Typography variant="h6" gutterBottom>
                   Drop your file here or click to browse
                 </Typography>
@@ -469,7 +507,9 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
               </Box>
             ) : (
               <Box>
-                <FileUpload sx={{ fontSize: 48, color: "primary.main", mb: 2 }} />
+                <FileUpload
+                  sx={{ fontSize: 48, color: "primary.main", mb: 2 }}
+                />
                 <Typography variant="h6" gutterBottom>
                   {file.name}
                 </Typography>
@@ -508,7 +548,8 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
             </Typography>
             {existingBuyers.slice(0, 3).map((item, index) => (
               <Typography key={index} variant="body2">
-                Row {item.row}: {item.buyerData.buyerNTNCNIC} - {item.buyerData.buyerBusinessName} 
+                Row {item.row}: {item.buyerData.buyerNTNCNIC} -{" "}
+                {item.buyerData.buyerBusinessName}
                 (Already exists as: {item.existingBuyer.buyerBusinessName})
               </Typography>
             ))}
@@ -523,7 +564,12 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
         {/* Preview Section */}
         {previewData.length > 0 && (
           <Box sx={{ mb: 2 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              mb={2}
+            >
               <Typography variant="h6">
                 Preview ({previewData.length} total rows)
               </Typography>
@@ -535,62 +581,91 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
                 {showPreview ? "Hide" : "Show"} Preview
               </Button>
             </Box>
-            
+
             {showPreview && (
-              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{ maxHeight: 400 }}
+              >
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5", width: 80 }}>
+                      <TableCell
+                        sx={{
+                          fontWeight: "bold",
+                          backgroundColor: "#f5f5f5",
+                          width: 80,
+                        }}
+                      >
                         Status
                       </TableCell>
                       {expectedColumns.map((column) => (
-                        <TableCell key={column} sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}>
+                        <TableCell
+                          key={column}
+                          sx={{
+                            fontWeight: "bold",
+                            backgroundColor: "#f5f5f5",
+                          }}
+                        >
                           {column}
                         </TableCell>
                       ))}
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {getCombinedPreviewData().slice(0, 10).map((row, index) => (
-                      <TableRow 
-                        key={index}
-                        sx={{
-                          backgroundColor: row._status === 'existing' ? '#fff3e0' : 'inherit',
-                          '&:hover': {
-                            backgroundColor: row._status === 'existing' ? '#ffe0b2' : '#f5f5f5'
-                          }
-                        }}
-                      >
-                        <TableCell>
-                          {row._status === 'existing' ? (
-                            <Chip 
-                              label="Skip" 
-                              size="small" 
-                              color="warning" 
-                              icon={<Info />}
-                              title={`Already exists as: ${row._existingBuyer.buyerBusinessName}`}
-                            />
-                          ) : (
-                            <Chip 
-                              label="New" 
-                              size="small" 
-                              color="success" 
-                              icon={<CheckCircle />}
-                            />
-                          )}
-                        </TableCell>
-                        {expectedColumns.map((column) => (
-                          <TableCell key={column}>
-                            {row[column] || "-"}
+                    {getCombinedPreviewData()
+                      .slice(0, 10)
+                      .map((row, index) => (
+                        <TableRow
+                          key={index}
+                          sx={{
+                            backgroundColor:
+                              row._status === "existing"
+                                ? "#fff3e0"
+                                : "inherit",
+                            "&:hover": {
+                              backgroundColor:
+                                row._status === "existing"
+                                  ? "#ffe0b2"
+                                  : "#f5f5f5",
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            {row._status === "existing" ? (
+                              <Chip
+                                label="Skip"
+                                size="small"
+                                color="warning"
+                                icon={<Info />}
+                                title={`Already exists as: ${row._existingBuyer.buyerBusinessName}`}
+                              />
+                            ) : (
+                              <Chip
+                                label="New"
+                                size="small"
+                                color="success"
+                                icon={<CheckCircle />}
+                              />
+                            )}
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                          {expectedColumns.map((column) => (
+                            <TableCell key={column}>
+                              {row[column] || "-"}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
                     {getCombinedPreviewData().length > 10 && (
                       <TableRow>
-                        <TableCell colSpan={expectedColumns.length + 1} align="center" sx={{ fontStyle: "italic", color: "text.secondary" }}>
-                          Showing first 10 rows of {getCombinedPreviewData().length} total rows
+                        <TableCell
+                          colSpan={expectedColumns.length + 1}
+                          align="center"
+                          sx={{ fontStyle: "italic", color: "text.secondary" }}
+                        >
+                          Showing first 10 rows of{" "}
+                          {getCombinedPreviewData().length} total rows
                         </TableCell>
                       </TableRow>
                     )}
@@ -623,7 +698,8 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
                   <Box display="flex" alignItems="center" gap={2} mb={1}>
                     <Warning color="warning" />
                     <Typography variant="body2" color="warning.main">
-                      {existingBuyers.length} buyers will be skipped (already exist)
+                      {existingBuyers.length} buyers will be skipped (already
+                      exist)
                     </Typography>
                   </Box>
                 )}
@@ -653,8 +729,12 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
         <Button
           onClick={handleUpload}
           variant="contained"
-          disabled={!file || newBuyers.length === 0 || uploading || checkingExisting}
-          startIcon={uploading ? <CircularProgress size={20} /> : <FileUpload />}
+          disabled={
+            !file || newBuyers.length === 0 || uploading || checkingExisting
+          }
+          startIcon={
+            uploading ? <CircularProgress size={20} /> : <FileUpload />
+          }
         >
           {uploading ? "Uploading..." : `Upload ${newBuyers.length} New Buyers`}
         </Button>
@@ -664,4 +744,3 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
 };
 
 export default BuyerUploader;
-

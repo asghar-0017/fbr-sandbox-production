@@ -1239,15 +1239,36 @@ export default function CreateInvoice() {
 
         // Only calculate sales tax if not manually entered
         if (!item.isSalesTaxManual) {
+          console.log("Auto calc - isSalesTaxManual is false");
           if (
             item.rate &&
             item.rate.toLowerCase() !== "exempt" &&
             item.rate !== "0%"
           ) {
+            console.log("Auto calc - Rate conditions passed:", item.rate);
             let salesTax = 0;
 
-            // Check if rate is in "/bill" format (fixed amount per item)
-            if (item.rate.includes("/bill")) {
+            // Check if rate is in "RS." format (fixed amount)
+            console.log(
+              "Auto calc - Checking rate:",
+              item.rate,
+              "Type:",
+              typeof item.rate
+            );
+            if (
+              item.rate &&
+              (item.rate.includes("RS.") ||
+                item.rate.includes("rs.") ||
+                item.rate.includes("Rs."))
+            ) {
+              const fixedAmount =
+                parseFloat(item.rate.replace(/RS\./i, "").trim()) || 0;
+              console.log(
+                "Auto calc - RS. format detected, fixedAmount:",
+                fixedAmount
+              );
+              salesTax = fixedAmount; // Fixed amount directly
+            } else if (item.rate.includes("/bill")) {
               const fixedAmount =
                 parseFloat(item.rate.replace("/bill", "")) || 0;
               const quantity = parseFloat(item.quantity || 0);
@@ -1274,15 +1295,36 @@ export default function CreateInvoice() {
       } else if (item.isValueSalesManual) {
         // If user manually entered value sales, only calculate sales tax if not manually entered
         if (!item.isSalesTaxManual) {
+          console.log("Manual calc - isSalesTaxManual is false");
           if (
             item.rate &&
             item.rate.toLowerCase() !== "exempt" &&
             item.rate !== "0%"
           ) {
+            console.log("Manual calc - Rate conditions passed:", item.rate);
             let salesTax = 0;
 
-            // Check if rate is in "/bill" format (fixed amount per item)
-            if (item.rate.includes("/bill")) {
+            // Check if rate is in "RS." format (fixed amount)
+            console.log(
+              "Manual calc - Checking rate:",
+              item.rate,
+              "Type:",
+              typeof item.rate
+            );
+            if (
+              item.rate &&
+              (item.rate.includes("RS.") ||
+                item.rate.includes("rs.") ||
+                item.rate.includes("Rs."))
+            ) {
+              const fixedAmount =
+                parseFloat(item.rate.replace(/RS\./i, "").trim()) || 0;
+              console.log(
+                "Manual calc - RS. format detected, fixedAmount:",
+                fixedAmount
+              );
+              salesTax = fixedAmount; // Fixed amount directly
+            } else if (item.rate.includes("/bill")) {
               const fixedAmount =
                 parseFloat(item.rate.replace("/bill", "")) || 0;
               const quantity = parseFloat(item.quantity || 0);
@@ -3057,7 +3099,7 @@ export default function CreateInvoice() {
             <TextField
               fullWidth
               size="small"
-              label="Company Invoice Ref No."
+              label="Company Invoice Ref No:"
               value={formData.companyInvoiceRefNo}
               onChange={(e) =>
                 handleChange("companyInvoiceRefNo", e.target.value)

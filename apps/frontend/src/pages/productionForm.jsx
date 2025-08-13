@@ -244,15 +244,36 @@ export default function ProductionFoam() {
         item.valueSalesExcludingST = unitCost.toString();
 
         // Sales tax
+        console.log("Production - Checking rate conditions:", item.rate);
         if (
           item.rate &&
           item.rate.toLowerCase() !== "exempt" &&
           item.rate !== "0%"
         ) {
+          console.log("Production - Rate conditions passed:", item.rate);
           let salesTax = 0;
 
-          // Check if rate is in "/bill" format (fixed amount per item)
-          if (item.rate.includes("/bill")) {
+          // Check if rate is in "RS." format (fixed amount)
+          console.log(
+            "Production - Checking rate:",
+            item.rate,
+            "Type:",
+            typeof item.rate
+          );
+          if (
+            item.rate &&
+            (item.rate.includes("RS.") ||
+              item.rate.includes("rs.") ||
+              item.rate.includes("Rs."))
+          ) {
+            const fixedAmount =
+              parseFloat(item.rate.replace(/RS\./i, "").trim()) || 0;
+            console.log(
+              "Production - RS. format detected, fixedAmount:",
+              fixedAmount
+            );
+            salesTax = fixedAmount; // Fixed amount directly
+          } else if (item.rate.includes("/bill")) {
             const fixedAmount = parseFloat(item.rate.replace("/bill", "")) || 0;
             const quantity = parseFloat(item.quantity || 0);
             salesTax = fixedAmount * quantity; // Fixed amount per item × quantity
@@ -1034,7 +1055,7 @@ export default function ProductionFoam() {
             <Box sx={{ m: 1, flex: "1 1 30%", minWidth: "250px" }}>
               <TextField
                 fullWidth
-                label="Company Invoice Ref No."
+                label="Company Invoice Ref No:"
                 value={formData.companyInvoiceRefNo}
                 onChange={(e) =>
                   handleChange("companyInvoiceRefNo", e.target.value)

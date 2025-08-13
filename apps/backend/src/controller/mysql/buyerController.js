@@ -5,26 +5,32 @@
 export const createBuyer = async (req, res) => {
   try {
     const { Buyer } = req.tenantModels;
-    const { buyerNTNCNIC, buyerBusinessName, buyerProvince, buyerAddress, buyerRegistrationType } = req.body;
+    const {
+      buyerNTNCNIC,
+      buyerBusinessName,
+      buyerProvince,
+      buyerAddress,
+      buyerRegistrationType,
+    } = req.body;
 
     // Validate required fields
     if (!buyerProvince || !buyerRegistrationType) {
       return res.status(400).json({
         success: false,
-        message: 'Buyer province and registration type are required'
+        message: "Buyer province and registration type are required",
       });
     }
 
     // Check if buyer with same NTN already exists
     if (buyerNTNCNIC) {
       const existingBuyer = await Buyer.findOne({
-        where: { buyerNTNCNIC: buyerNTNCNIC }
+        where: { buyerNTNCNIC: buyerNTNCNIC },
       });
 
       if (existingBuyer) {
         return res.status(409).json({
           success: false,
-          message: `Buyer with NTN/CNIC "${buyerNTNCNIC}" already exists. Please use a different NTN/CNIC or update the existing buyer.`
+          message: `Buyer with NTN/CNIC "${buyerNTNCNIC}" already exists. Please use a different NTN/CNIC or update the existing buyer.`,
         });
       }
     }
@@ -35,37 +41,37 @@ export const createBuyer = async (req, res) => {
       buyerBusinessName,
       buyerProvince,
       buyerAddress,
-      buyerRegistrationType
+      buyerRegistrationType,
     });
 
     res.status(201).json({
       success: true,
-      message: 'Buyer created successfully',
-      data: buyer
+      message: "Buyer created successfully",
+      data: buyer,
     });
   } catch (error) {
-    console.error('Error creating buyer:', error);
-    
+    console.error("Error creating buyer:", error);
+
     // Handle specific database errors
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
-        errors: error.errors.map(e => e.message)
+        message: "Validation error",
+        errors: error.errors.map((e) => e.message),
       });
     }
-    
-    if (error.name === 'SequelizeUniqueConstraintError') {
+
+    if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(409).json({
         success: false,
-        message: 'Buyer with this NTN/CNIC already exists'
+        message: "Buyer with this NTN/CNIC already exists",
       });
     }
-    
+
     res.status(500).json({
       success: false,
-      message: 'Error creating buyer',
-      error: error.message
+      message: "Error creating buyer",
+      error: error.message,
     });
   }
 };
@@ -83,8 +89,12 @@ export const getAllBuyers = async (req, res) => {
     if (search) {
       whereClause[req.tenantDb.Sequelize.Op.or] = [
         { buyerNTNCNIC: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } },
-        { buyerBusinessName: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } },
-        { buyerProvince: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } }
+        {
+          buyerBusinessName: {
+            [req.tenantDb.Sequelize.Op.like]: `%${search}%`,
+          },
+        },
+        { buyerProvince: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } },
       ];
     }
 
@@ -92,7 +102,7 @@ export const getAllBuyers = async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['created_at', 'DESC']]
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
@@ -103,16 +113,16 @@ export const getAllBuyers = async (req, res) => {
           current_page: parseInt(page),
           total_pages: Math.ceil(count / limit),
           total_records: count,
-          records_per_page: parseInt(limit)
-        }
-      }
+          records_per_page: parseInt(limit),
+        },
+      },
     });
   } catch (error) {
-    console.error('Error getting buyers:', error);
+    console.error("Error getting buyers:", error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving buyers',
-      error: error.message
+      message: "Error retrieving buyers",
+      error: error.message,
     });
   }
 };
@@ -128,20 +138,20 @@ export const getBuyerById = async (req, res) => {
     if (!buyer) {
       return res.status(404).json({
         success: false,
-        message: 'Buyer not found'
+        message: "Buyer not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: buyer
+      data: buyer,
     });
   } catch (error) {
-    console.error('Error getting buyer:', error);
+    console.error("Error getting buyer:", error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving buyer',
-      error: error.message
+      message: "Error retrieving buyer",
+      error: error.message,
     });
   }
 };
@@ -151,30 +161,36 @@ export const updateBuyer = async (req, res) => {
   try {
     const { Buyer } = req.tenantModels;
     const { id } = req.params;
-    const { buyerNTNCNIC, buyerBusinessName, buyerProvince, buyerAddress, buyerRegistrationType } = req.body;
+    const {
+      buyerNTNCNIC,
+      buyerBusinessName,
+      buyerProvince,
+      buyerAddress,
+      buyerRegistrationType,
+    } = req.body;
 
     const buyer = await Buyer.findByPk(id);
 
     if (!buyer) {
       return res.status(404).json({
         success: false,
-        message: 'Buyer not found'
+        message: "Buyer not found",
       });
     }
 
     // Check if the new NTN already exists with another buyer
     if (buyerNTNCNIC && buyerNTNCNIC !== buyer.buyerNTNCNIC) {
       const existingBuyer = await Buyer.findOne({
-        where: { 
+        where: {
           buyerNTNCNIC: buyerNTNCNIC,
-          id: { [req.tenantDb.Sequelize.Op.ne]: id } // Exclude current buyer from check
-        }
+          id: { [req.tenantDb.Sequelize.Op.ne]: id }, // Exclude current buyer from check
+        },
       });
 
       if (existingBuyer) {
         return res.status(409).json({
           success: false,
-          message: `Buyer with NTN/CNIC "${buyerNTNCNIC}" already exists. Please use a different NTN/CNIC.`
+          message: `Buyer with NTN/CNIC "${buyerNTNCNIC}" already exists. Please use a different NTN/CNIC.`,
         });
       }
     }
@@ -184,37 +200,37 @@ export const updateBuyer = async (req, res) => {
       buyerBusinessName,
       buyerProvince,
       buyerAddress,
-      buyerRegistrationType
+      buyerRegistrationType,
     });
 
     res.status(200).json({
       success: true,
-      message: 'Buyer updated successfully',
-      data: buyer
+      message: "Buyer updated successfully",
+      data: buyer,
     });
   } catch (error) {
-    console.error('Error updating buyer:', error);
-    
+    console.error("Error updating buyer:", error);
+
     // Handle specific database errors
-    if (error.name === 'SequelizeValidationError') {
+    if (error.name === "SequelizeValidationError") {
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
-        errors: error.errors.map(e => e.message)
+        message: "Validation error",
+        errors: error.errors.map((e) => e.message),
       });
     }
-    
-    if (error.name === 'SequelizeUniqueConstraintError') {
+
+    if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(409).json({
         success: false,
-        message: 'Buyer with this NTN/CNIC already exists'
+        message: "Buyer with this NTN/CNIC already exists",
       });
     }
-    
+
     res.status(500).json({
       success: false,
-      message: 'Error updating buyer',
-      error: error.message
+      message: "Error updating buyer",
+      error: error.message,
     });
   }
 };
@@ -230,7 +246,7 @@ export const deleteBuyer = async (req, res) => {
     if (!buyer) {
       return res.status(404).json({
         success: false,
-        message: 'Buyer not found'
+        message: "Buyer not found",
       });
     }
 
@@ -238,14 +254,14 @@ export const deleteBuyer = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Buyer deleted successfully'
+      message: "Buyer deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting buyer:', error);
+    console.error("Error deleting buyer:", error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting buyer',
-      error: error.message
+      message: "Error deleting buyer",
+      error: error.message,
     });
   }
 };
@@ -258,19 +274,19 @@ export const getBuyersByProvince = async (req, res) => {
 
     const buyers = await Buyer.findAll({
       where: { buyerProvince: province },
-      order: [['buyerBusinessName', 'ASC']]
+      order: [["buyerBusinessName", "ASC"]],
     });
 
     res.status(200).json({
       success: true,
-      data: buyers
+      data: buyers,
     });
   } catch (error) {
-    console.error('Error getting buyers by province:', error);
+    console.error("Error getting buyers by province:", error);
     res.status(500).json({
       success: false,
-      message: 'Error retrieving buyers by province',
-      error: error.message
+      message: "Error retrieving buyers by province",
+      error: error.message,
     });
   }
 };
@@ -284,7 +300,7 @@ export const bulkCreateBuyers = async (req, res) => {
     if (!Array.isArray(buyers) || buyers.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Buyers array is required and must not be empty'
+        message: "Buyers array is required and must not be empty",
       });
     }
 
@@ -292,70 +308,88 @@ export const bulkCreateBuyers = async (req, res) => {
     if (buyers.length > 1000) {
       return res.status(400).json({
         success: false,
-        message: 'Maximum 1000 buyers can be uploaded at once'
+        message: "Maximum 1000 buyers can be uploaded at once",
       });
     }
 
     const results = {
       created: [],
       errors: [],
-      total: buyers.length
+      total: buyers.length,
     };
 
     // Process each buyer
     for (let i = 0; i < buyers.length; i++) {
       const buyerData = buyers[i];
-      
+
       console.log(`Processing buyer ${i + 1}:`, {
         buyerNTNCNIC: buyerData.buyerNTNCNIC,
         buyerBusinessName: buyerData.buyerBusinessName,
         buyerProvince: buyerData.buyerProvince,
-        buyerRegistrationType: buyerData.buyerRegistrationType
+        buyerRegistrationType: buyerData.buyerRegistrationType,
       });
-      
+
       try {
         // Validate required fields
         if (!buyerData.buyerProvince || !buyerData.buyerProvince.trim()) {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Province is required'
+            error: "Province is required",
           });
           continue;
         }
 
-        if (!buyerData.buyerRegistrationType || !buyerData.buyerRegistrationType.trim()) {
+        if (
+          !buyerData.buyerRegistrationType ||
+          !buyerData.buyerRegistrationType.trim()
+        ) {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Registration Type is required'
+            error: "Registration Type is required",
           });
           continue;
         }
 
         // Validate province - accept both uppercase and title case
         const validProvinces = [
-          'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan', 
-          'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir',
-          'PUNJAB', 'SINDH', 'KHYBER PAKHTUNKHWA', 'BALOCHISTAN', 
-          'ISLAMABAD CAPITAL TERRITORY', 'GILGIT-BALTISTAN', 'AZAD KASHMIR'
+          "Balochistan",
+          "Azad Jammu and Kashmir",
+          "Capital Territory",
+          "Punjab",
+          "Khyber Pakhtunkhwa",
+          "Gilgit Baltistan",
+          "Sindh",
+          "BALOCHISTAN",
+          "AZAD JAMMU AND KASHMIR",
+          "CAPITAL TERRITORY",
+          "PUNJAB",
+          "KHYBER PAKHTUNKHWA",
+          "GILGIT BALTISTAN",
+          "SINDH",
         ];
         if (!validProvinces.includes(buyerData.buyerProvince.trim())) {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Invalid province. Valid provinces are: Punjab, Sindh, Khyber Pakhtunkhwa, Balochistan, Islamabad Capital Territory, Gilgit-Baltistan, Azad Kashmir'
+            error:
+              "Invalid province. Valid provinces are: Balochistan, Azad Jammu and Kashmir, Capital Territory, Punjab, Khyber Pakhtunkhwa, Gilgit Baltistan, Sindh",
           });
           continue;
         }
 
         // Validate registration type
-        const validRegistrationTypes = ['Registered', 'Unregistered'];
-        if (!validRegistrationTypes.includes(buyerData.buyerRegistrationType.trim())) {
+        const validRegistrationTypes = ["Registered", "Unregistered"];
+        if (
+          !validRegistrationTypes.includes(
+            buyerData.buyerRegistrationType.trim()
+          )
+        ) {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Registration Type must be "Registered" or "Unregistered"'
+            error: 'Registration Type must be "Registered" or "Unregistered"',
           });
           continue;
         }
@@ -367,7 +401,7 @@ export const bulkCreateBuyers = async (req, res) => {
             results.errors.push({
               index: i,
               row: i + 1,
-              error: 'NTN/CNIC should be between 7-15 characters'
+              error: "NTN/CNIC should be between 7-15 characters",
             });
             continue;
           }
@@ -376,14 +410,14 @@ export const bulkCreateBuyers = async (req, res) => {
         // Check if buyer with same NTN already exists
         if (buyerData.buyerNTNCNIC && buyerData.buyerNTNCNIC.trim()) {
           const existingBuyer = await Buyer.findOne({
-            where: { buyerNTNCNIC: buyerData.buyerNTNCNIC.trim() }
+            where: { buyerNTNCNIC: buyerData.buyerNTNCNIC.trim() },
           });
 
           if (existingBuyer) {
             results.errors.push({
               index: i,
               row: i + 1,
-              error: `Buyer with NTN/CNIC "${buyerData.buyerNTNCNIC}" already exists in database`
+              error: `Buyer with NTN/CNIC "${buyerData.buyerNTNCNIC}" already exists in database`,
             });
             continue;
           }
@@ -392,14 +426,15 @@ export const bulkCreateBuyers = async (req, res) => {
         // Check for duplicate NTN within the same upload batch
         if (buyerData.buyerNTNCNIC && buyerData.buyerNTNCNIC.trim()) {
           const duplicateInBatch = results.created.find(
-            createdBuyer => createdBuyer.buyerNTNCNIC === buyerData.buyerNTNCNIC.trim()
+            (createdBuyer) =>
+              createdBuyer.buyerNTNCNIC === buyerData.buyerNTNCNIC.trim()
           );
-          
+
           if (duplicateInBatch) {
             results.errors.push({
               index: i,
               row: i + 1,
-              error: `Duplicate NTN/CNIC "${buyerData.buyerNTNCNIC}" found in upload file`
+              error: `Duplicate NTN/CNIC "${buyerData.buyerNTNCNIC}" found in upload file`,
             });
             continue;
           }
@@ -408,24 +443,30 @@ export const bulkCreateBuyers = async (req, res) => {
         // Normalize province to title case
         const normalizeProvince = (province) => {
           const provinceMap = {
-            'PUNJAB': 'Punjab',
-            'SINDH': 'Sindh',
-            'KHYBER PAKHTUNKHWA': 'Khyber Pakhtunkhwa',
-            'BALOCHISTAN': 'Balochistan',
-            'ISLAMABAD CAPITAL TERRITORY': 'Islamabad Capital Territory',
-            'GILGIT-BALTISTAN': 'Gilgit-Baltistan',
-            'AZAD KASHMIR': 'Azad Kashmir'
+            PUNJAB: "Punjab",
+            SINDH: "Sindh",
+            "KHYBER PAKHTUNKHWA": "Khyber Pakhtunkhwa",
+            BALOCHISTAN: "Balochistan",
+            "CAPITAL TERRITORY": "Capital Territory",
+            "GILGIT BALTISTAN": "Gilgit Baltistan",
+            "AZAD JAMMU AND KASHMIR": "Azad Jammu and Kashmir",
           };
           return provinceMap[province.trim()] || province.trim();
         };
 
         // Create buyer with trimmed values
         const buyer = await Buyer.create({
-          buyerNTNCNIC: buyerData.buyerNTNCNIC ? buyerData.buyerNTNCNIC.trim() : null,
-          buyerBusinessName: buyerData.buyerBusinessName ? buyerData.buyerBusinessName.trim() : null,
+          buyerNTNCNIC: buyerData.buyerNTNCNIC
+            ? buyerData.buyerNTNCNIC.trim()
+            : null,
+          buyerBusinessName: buyerData.buyerBusinessName
+            ? buyerData.buyerBusinessName.trim()
+            : null,
           buyerProvince: normalizeProvince(buyerData.buyerProvince),
-          buyerAddress: buyerData.buyerAddress ? buyerData.buyerAddress.trim() : null,
-          buyerRegistrationType: buyerData.buyerRegistrationType.trim()
+          buyerAddress: buyerData.buyerAddress
+            ? buyerData.buyerAddress.trim()
+            : null,
+          buyerRegistrationType: buyerData.buyerRegistrationType.trim(),
         });
 
         console.log(`Successfully created buyer ${i + 1}:`, buyer.toJSON());
@@ -433,43 +474,45 @@ export const bulkCreateBuyers = async (req, res) => {
       } catch (error) {
         console.error(`Error creating buyer at index ${i}:`, error);
         console.error(`Buyer data that failed:`, buyerData);
-        
+
         // Handle specific database errors
-        if (error.name === 'SequelizeValidationError') {
+        if (error.name === "SequelizeValidationError") {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Validation error: ' + error.errors.map(e => e.message).join(', ')
+            error:
+              "Validation error: " +
+              error.errors.map((e) => e.message).join(", "),
           });
-        } else if (error.name === 'SequelizeUniqueConstraintError') {
+        } else if (error.name === "SequelizeUniqueConstraintError") {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: 'Duplicate NTN/CNIC found'
+            error: "Duplicate NTN/CNIC found",
           });
         } else {
           results.errors.push({
             index: i,
             row: i + 1,
-            error: error.message || 'Unknown error occurred'
+            error: error.message || "Unknown error occurred",
           });
         }
       }
     }
 
     // Log final summary
-    console.log('=== Bulk Upload Summary ===');
+    console.log("=== Bulk Upload Summary ===");
     console.log(`Total buyers processed: ${results.total}`);
     console.log(`Successfully created: ${results.created.length}`);
     console.log(`Failed: ${results.errors.length}`);
-    
+
     if (results.errors.length > 0) {
-      console.log('Errors:');
+      console.log("Errors:");
       results.errors.forEach((error, index) => {
         console.log(`  ${index + 1}. Row ${error.row}: ${error.error}`);
       });
     }
-    console.log('=== End Summary ===');
+    console.log("=== End Summary ===");
 
     res.status(200).json({
       success: true,
@@ -480,19 +523,19 @@ export const bulkCreateBuyers = async (req, res) => {
         summary: {
           total: results.total,
           successful: results.created.length,
-          failed: results.errors.length
-        }
-      }
+          failed: results.errors.length,
+        },
+      },
     });
   } catch (error) {
-    console.error('Error in bulk create buyers:', error);
+    console.error("Error in bulk create buyers:", error);
     res.status(500).json({
       success: false,
-      message: 'Error processing bulk buyer upload',
-      error: error.message
+      message: "Error processing bulk buyer upload",
+      error: error.message,
     });
   }
-}; 
+};
 
 // Check existing buyers for preview
 export const checkExistingBuyers = async (req, res) => {
@@ -503,7 +546,7 @@ export const checkExistingBuyers = async (req, res) => {
     if (!Array.isArray(buyers) || buyers.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Buyers array is required and must not be empty'
+        message: "Buyers array is required and must not be empty",
       });
     }
 
@@ -511,56 +554,60 @@ export const checkExistingBuyers = async (req, res) => {
     if (buyers.length > 1000) {
       return res.status(400).json({
         success: false,
-        message: 'Maximum 1000 buyers can be checked at once'
+        message: "Maximum 1000 buyers can be checked at once",
       });
     }
 
     const results = {
       existing: [],
       new: [],
-      total: buyers.length
+      total: buyers.length,
     };
 
     // Extract all NTN/CNIC values for batch checking
     const ntnCnicValues = buyers
-      .map((buyer, index) => ({ 
-        ntnCnic: buyer.buyerNTNCNIC?.trim(), 
+      .map((buyer, index) => ({
+        ntnCnic: buyer.buyerNTNCNIC?.trim(),
         index,
-        buyerData: buyer 
+        buyerData: buyer,
       }))
-      .filter(item => item.ntnCnic); // Only check buyers with NTN/CNIC
+      .filter((item) => item.ntnCnic); // Only check buyers with NTN/CNIC
 
     if (ntnCnicValues.length > 0) {
       // Batch query to find existing buyers
       const existingBuyers = await Buyer.findAll({
         where: {
-          buyerNTNCNIC: ntnCnicValues.map(item => item.ntnCnic)
+          buyerNTNCNIC: ntnCnicValues.map((item) => item.ntnCnic),
         },
-        attributes: ['buyerNTNCNIC', 'buyerBusinessName']
+        attributes: ["buyerNTNCNIC", "buyerBusinessName"],
       });
 
-      const existingNtnCnicSet = new Set(existingBuyers.map(buyer => buyer.buyerNTNCNIC));
+      const existingNtnCnicSet = new Set(
+        existingBuyers.map((buyer) => buyer.buyerNTNCNIC)
+      );
 
       // Categorize buyers
       buyers.forEach((buyer, index) => {
         const ntnCnic = buyer.buyerNTNCNIC?.trim();
-        
+
         if (ntnCnic && existingNtnCnicSet.has(ntnCnic)) {
-          const existingBuyer = existingBuyers.find(b => b.buyerNTNCNIC === ntnCnic);
+          const existingBuyer = existingBuyers.find(
+            (b) => b.buyerNTNCNIC === ntnCnic
+          );
           results.existing.push({
             index,
             row: index + 1,
             buyerData: buyer,
             existingBuyer: {
               buyerNTNCNIC: existingBuyer.buyerNTNCNIC,
-              buyerBusinessName: existingBuyer.buyerBusinessName
-            }
+              buyerBusinessName: existingBuyer.buyerBusinessName,
+            },
           });
         } else {
           results.new.push({
             index,
             row: index + 1,
-            buyerData: buyer
+            buyerData: buyer,
           });
         }
       });
@@ -570,7 +617,7 @@ export const checkExistingBuyers = async (req, res) => {
         results.new.push({
           index,
           row: index + 1,
-          buyerData: buyer
+          buyerData: buyer,
         });
       });
     }
@@ -583,16 +630,16 @@ export const checkExistingBuyers = async (req, res) => {
         summary: {
           total: results.total,
           existing: results.existing.length,
-          new: results.new.length
-        }
-      }
+          new: results.new.length,
+        },
+      },
     });
   } catch (error) {
-    console.error('Error checking existing buyers:', error);
+    console.error("Error checking existing buyers:", error);
     res.status(500).json({
       success: false,
-      message: 'Error checking existing buyers',
-      error: error.message
+      message: "Error checking existing buyers",
+      error: error.message,
     });
   }
-}; 
+};

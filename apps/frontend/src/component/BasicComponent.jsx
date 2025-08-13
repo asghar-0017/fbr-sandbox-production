@@ -24,6 +24,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import UploadIcon from "@mui/icons-material/Upload";
 
 import { api, API_CONFIG } from "../API/Api";
 import SearchIcon from "@mui/icons-material/Search";
@@ -32,6 +33,7 @@ import Tooltip from "@mui/material/Tooltip";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
 import InvoiceViewModal from "./InvoiceViewModal";
 import CustomPagination from "./CustomPagination";
+import InvoiceUploader from "./InvoiceUploader";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -40,6 +42,7 @@ export default function BasicTable() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -321,6 +324,31 @@ export default function BasicTable() {
     }
   };
 
+  // Handle invoice upload
+  const handleInvoiceUpload = async (invoicesData) => {
+    try {
+      if (!selectedTenant) {
+        throw new Error("No Company selected");
+      }
+
+      const response = await api.post(
+        `/tenant/${selectedTenant.tenant_id}/invoices/bulk`,
+        { invoices: invoicesData }
+      );
+
+      if (response.data.success) {
+        // Refresh the invoice list after successful upload
+        getMyInvoices();
+        return response;
+      } else {
+        throw new Error(response.data.message || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Error uploading invoices:", error);
+      throw error;
+    }
+  };
+
   // Since we're using server-side pagination, we don't need client-side filtering
   // The server handles all filtering and pagination
   const filteredInvoices = invoices || [];
@@ -439,6 +467,7 @@ export default function BasicTable() {
             sx={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: 2,
               mb: 3,
             }}
@@ -453,6 +482,20 @@ export default function BasicTable() {
             >
               Your Invoices
             </Typography>
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              onClick={() => setUploadModalOpen(true)}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+              }}
+            >
+              Upload Invoices
+            </Button>
           </Box>
           {/* Search and Filter Controls */}
           <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
@@ -889,6 +932,14 @@ export default function BasicTable() {
                 handleButtonClick(selectedInvoice);
               }
             }}
+          />
+
+          {/* Invoice Uploader Modal */}
+          <InvoiceUploader
+            isOpen={uploadModalOpen}
+            onClose={() => setUploadModalOpen(false)}
+            onUpload={handleInvoiceUpload}
+            selectedTenant={selectedTenant}
           />
         </Box>
       )}

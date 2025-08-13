@@ -62,6 +62,10 @@ export const createInvoiceModel = (sequelize) => {
         type: DataTypes.STRING(100),
         allowNull: true,
       },
+      companyInvoiceRefNo: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
       transctypeId: {
         type: DataTypes.STRING(100),
         allowNull: true,

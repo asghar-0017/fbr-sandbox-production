@@ -21,7 +21,7 @@ import buyerRoutes from "./routes/buyerRoutes.js";
 import invoiceRoutes, { publicInvoiceRoutes } from "./routes/invoiceRoutes.js";
 import hsCodeRoutes from "./routes/hsCodeRoutes.js";
 
-dotenv.config()
+dotenv.config();
 
 const app = express();
 
@@ -42,7 +42,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
-      "https://central-timber.inplsoftwares.online",
+      "https://anwer-tex.inplsoftwares.online",
       "http://localhost:3000",
       "https://fbrtestcase.inplsoftwares.online",
       "*",

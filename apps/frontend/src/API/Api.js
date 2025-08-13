@@ -38,7 +38,7 @@ const API_CONFIG = {
       "API_CONFIG: getCurrentToken(",
       environment,
       ") =",
-      token ? "Available" : "Not available"
+      token ? `Available (${token.substring(0, 10)}...)` : "Not available"
     );
     return token;
   },

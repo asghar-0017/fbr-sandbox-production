@@ -722,7 +722,11 @@ export const getAllInvoices = async (req, res) => {
         transctypeId: plainInvoice.transctypeId,
         status: plainInvoice.status,
         fbr_invoice_number: plainInvoice.fbr_invoice_number,
-        items: plainInvoice.InvoiceItems || [],
+        items: (plainInvoice.InvoiceItems || []).map((item) => ({
+          ...item,
+          retailPrice:
+            item.fixedNotifiedValueOrRetailPrice || item.retailPrice || "0",
+        })),
         created_at: plainInvoice.created_at,
         updated_at: plainInvoice.updated_at,
       };
@@ -794,7 +798,11 @@ export const getInvoiceById = async (req, res) => {
       transctypeId: plainInvoice.transctypeId,
       status: plainInvoice.status,
       fbr_invoice_number: plainInvoice.fbr_invoice_number,
-      items: plainInvoice.InvoiceItems || [],
+      items: (plainInvoice.InvoiceItems || []).map((item) => ({
+        ...item,
+        retailPrice:
+          item.fixedNotifiedValueOrRetailPrice || item.retailPrice || "0",
+      })),
       created_at: plainInvoice.created_at,
       updated_at: plainInvoice.updated_at,
     };
@@ -836,9 +844,20 @@ export const getInvoiceByNumber = async (req, res) => {
       });
     }
 
+    // Transform the data to match frontend expectations
+    const plainInvoice = invoice.get({ plain: true });
+    const transformedInvoice = {
+      ...plainInvoice,
+      items: (plainInvoice.InvoiceItems || []).map((item) => ({
+        ...item,
+        retailPrice:
+          item.fixedNotifiedValueOrRetailPrice || item.retailPrice || "0",
+      })),
+    };
+
     res.status(200).json({
       success: true,
-      data: invoice,
+      data: transformedInvoice,
     });
   } catch (error) {
     console.error("Error getting invoice by number:", error);

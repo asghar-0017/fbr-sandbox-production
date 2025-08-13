@@ -17,6 +17,16 @@ import PrintIcon from "@mui/icons-material/Print";
 import "./InvoicePrintStyles.css";
 import { generateInvoiceQRCode } from "../utils/qrCodeGenerator";
 
+// Utility function to format numbers with commas
+const formatNumberWithCommas = (number) => {
+  if (number === null || number === undefined || isNaN(number)) return "0.00";
+  const num = parseFloat(number);
+  return num.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
   if (!invoice) return null;
 
@@ -492,7 +502,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {item.quantity}
+                      {formatNumberWithCommas(item.quantity)}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -502,7 +512,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {(parseFloat(item.unitPrice) || 0).toFixed(2)}
+                      {formatNumberWithCommas(parseFloat(item.unitPrice))}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -512,7 +522,9 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {(parseFloat(item.valueSalesExcludingST) || 0).toFixed(2)}
+                      {formatNumberWithCommas(
+                        parseFloat(item.valueSalesExcludingST)
+                      )}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -532,58 +544,8 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {(parseFloat(item.salesTaxApplicable) || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        border: "1px solid #157492",
-                        textAlign: "center",
-                        fontSize: "11px",
-                        p: 1,
-                      }}
-                    >
-                      {(parseFloat(item.extraTax) || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        border: "1px solid #157492",
-                        textAlign: "center",
-                        fontSize: "11px",
-                        p: 1,
-                      }}
-                    >
-                      {(parseFloat(item.furtherTax) || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        border: "1px solid #157492",
-                        textAlign: "center",
-                        fontSize: "11px",
-                        p: 1,
-                      }}
-                    >
-                      {(parseFloat(item.fedPayable) || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        border: "1px solid #157492",
-                        textAlign: "center",
-                        fontSize: "11px",
-                        p: 1,
-                      }}
-                    >
-                      {(parseFloat(item.discount) || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        border: "1px solid #157492",
-                        textAlign: "center",
-                        fontSize: "11px",
-                        p: 1,
-                      }}
-                    >
-                      {(parseFloat(item.salesTaxWithheldAtSource) || 0).toFixed(
-                        2
+                      {formatNumberWithCommas(
+                        parseFloat(item.salesTaxApplicable)
                       )}
                     </TableCell>
                     <TableCell
@@ -594,7 +556,59 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
-                      {(parseFloat(item.totalValues) || 0).toFixed(2)}
+                      {formatNumberWithCommas(parseFloat(item.extraTax))}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {formatNumberWithCommas(parseFloat(item.furtherTax))}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {formatNumberWithCommas(parseFloat(item.fedPayable))}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {formatNumberWithCommas(parseFloat(item.discount))}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {formatNumberWithCommas(
+                        parseFloat(item.salesTaxWithheldAtSource)
+                      )}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {formatNumberWithCommas(parseFloat(item.totalValues))}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -622,28 +636,29 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
               }}
             >
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Sub Total (Excl. Tax): {subTotal.toFixed(2)}
+                Sub Total (Excl. Tax): {formatNumberWithCommas(subTotal)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Sales Tax (GST): {gst.toFixed(2)}
+                Sales Tax (GST): {formatNumberWithCommas(gst)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Further Tax: {further.toFixed(2)}
+                Further Tax: {formatNumberWithCommas(further)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Extra Tax: {extra.toFixed(2)}
+                Extra Tax: {formatNumberWithCommas(extra)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                fedPayable: {fed.toFixed(2)}
+                fedPayable: {formatNumberWithCommas(fed)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Discount: {dis.toFixed(2)}
+                Discount: {formatNumberWithCommas(dis)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Sales Tax Withheld: {withheld.toFixed(2)}
+                Sales Tax Withheld: {formatNumberWithCommas(withheld)}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                Grand Total (Incl. All Taxes): RS. {grandTotal.toFixed(2)}
+                Grand Total (Incl. All Taxes): RS.{" "}
+                {formatNumberWithCommas(grandTotal)}
               </Typography>
             </Box>
           </Box>

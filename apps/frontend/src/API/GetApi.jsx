@@ -7,14 +7,25 @@ const { apiKey } = API_CONFIG;
 
 export const postData = async (endpoint, data, environment = "sandbox") => {
   // Get current token dynamically from context
-  const token = API_CONFIG.getCurrentToken(environment);
+  let token = API_CONFIG.getCurrentToken(environment);
 
   if (!token) {
-    const error = new Error(
-      `No ${environment} token found for the selected Company. Please ensure the Company is selected and credentials are loaded.`
+    console.warn(
+      "Token not available for API call, checking localStorage fallback..."
     );
-    console.error("Token not available for API call:", error.message);
-    throw error;
+
+    // Try fallback from localStorage
+    const fallbackToken = localStorage.getItem("sandboxProductionToken");
+    if (fallbackToken) {
+      console.log("Found token in localStorage fallback, using it");
+      token = fallbackToken;
+    } else {
+      const error = new Error(
+        `No ${environment} token found for the selected Company. Please ensure the Company is selected and credentials are loaded.`
+      );
+      console.error("Token not available for API call:", error.message);
+      throw error;
+    }
   }
 
   const config = {
@@ -87,14 +98,25 @@ export const postData = async (endpoint, data, environment = "sandbox") => {
 
 export const fetchData = async (endpoint, environment = "sandbox") => {
   // Get current token dynamically from context
-  const token = API_CONFIG.getCurrentToken(environment);
+  let token = API_CONFIG.getCurrentToken(environment);
 
   if (!token) {
-    const error = new Error(
-      `No ${environment} token found for the selected Company. Please ensure the Company is selected and credentials are loaded.`
+    console.warn(
+      "Token not available for API call, checking localStorage fallback..."
     );
-    console.error("Token not available for API call:", error.message);
-    throw error;
+
+    // Try fallback from localStorage
+    const fallbackToken = localStorage.getItem("sandboxProductionToken");
+    if (fallbackToken) {
+      console.log("Found token in localStorage fallback, using it");
+      token = fallbackToken;
+    } else {
+      const error = new Error(
+        `No ${environment} token found for the selected Company. Please ensure the Company is selected and credentials are loaded.`
+      );
+      console.error("Token not available for API call:", error.message);
+      throw error;
+    }
   }
 
   const config = {

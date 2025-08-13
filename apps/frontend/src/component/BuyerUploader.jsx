@@ -356,7 +356,7 @@ const BuyerUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
 
         if (summary.failed > 0) {
           // Show detailed error information
-          const errorDetails = errors
+          let errorDetails = errors
             .slice(0, 10)
             .map((err) => `Row ${err.row}: ${err.error}`)
             .join("\n");

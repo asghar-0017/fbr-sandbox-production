@@ -325,29 +325,29 @@ export default function BasicTable() {
   };
 
   // Handle invoice upload
-  const handleInvoiceUpload = async (invoicesData) => {
-    try {
-      if (!selectedTenant) {
-        throw new Error("No Company selected");
-      }
+  // const handleInvoiceUpload = async (invoicesData) => {
+  //   try {
+  //     if (!selectedTenant) {
+  //       throw new Error("No Company selected");
+  //     }
 
-      const response = await api.post(
-        `/tenant/${selectedTenant.tenant_id}/invoices/bulk`,
-        { invoices: invoicesData }
-      );
+  //     const response = await api.post(
+  //       `/tenant/${selectedTenant.tenant_id}/invoices/bulk`,
+  //       { invoices: invoicesData }
+  //     );
 
-      if (response.data.success) {
-        // Refresh the invoice list after successful upload
-        getMyInvoices();
-        return response;
-      } else {
-        throw new Error(response.data.message || "Upload failed");
-      }
-    } catch (error) {
-      console.error("Error uploading invoices:", error);
-      throw error;
-    }
-  };
+  //     if (response.data.success) {
+  //       // Refresh the invoice list after successful upload
+  //       getMyInvoices();
+  //       return response;
+  //     } else {
+  //       throw new Error(response.data.message || "Upload failed");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error uploading invoices:", error);
+  //     throw error;
+  //   }
+  // };
 
   // Since we're using server-side pagination, we don't need client-side filtering
   // The server handles all filtering and pagination
@@ -482,7 +482,7 @@ export default function BasicTable() {
             >
               Your Invoices
             </Typography>
-            <Button
+            {/* <Button
               variant="contained"
               startIcon={<UploadIcon />}
               onClick={() => setUploadModalOpen(true)}
@@ -495,7 +495,7 @@ export default function BasicTable() {
               }}
             >
               Upload Invoices
-            </Button>
+            </Button> */}
           </Box>
           {/* Search and Filter Controls */}
           <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
@@ -934,13 +934,13 @@ export default function BasicTable() {
             }}
           />
 
-          {/* Invoice Uploader Modal */}
+          {/* Invoice Uploader Modal
           <InvoiceUploader
             isOpen={uploadModalOpen}
             onClose={() => setUploadModalOpen(false)}
             onUpload={handleInvoiceUpload}
             selectedTenant={selectedTenant}
-          />
+          /> */}
         </Box>
       )}
     </>

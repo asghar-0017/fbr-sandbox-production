@@ -128,25 +128,26 @@ const Buyers = () => {
       const { summary, errors } = response.data.data;
       if (summary.failed > 0) {
         // Show detailed error information
-        const errorDetails = errors.slice(0, 5).map(err => 
-          `Row ${err.row}: ${err.error}`
-        ).join('\n');
-        
+        let errorDetails = errors
+          .slice(0, 5)
+          .map((err) => `Row ${err.row}: ${err.error}`)
+          .join("\n");
+
         if (errors.length > 5) {
           errorDetails += `\n... and ${errors.length - 5} more errors`;
         }
-        
+
         toast.warning(
           `Upload completed with issues: ${summary.successful} buyers added, ${summary.failed} failed. Check the details for more information.`,
           {
             autoClose: 8000,
             closeOnClick: false,
-            pauseOnHover: true
+            pauseOnHover: true,
           }
         );
-        
+
         // Log detailed errors to console for debugging
-        console.error('Upload errors:', errors);
+        console.error("Upload errors:", errors);
       } else {
         toast.success(
           `Successfully uploaded ${summary.successful} buyers! All buyers have been added to your system.`
@@ -156,21 +157,24 @@ const Buyers = () => {
       return response.data;
     } catch (error) {
       console.error("Error in bulk upload:", error);
-      
+
       let errorMessage = "Error uploading buyers.";
-      
+
       if (error.response) {
         const { status, data } = error.response;
-        
+
         if (status === 400) {
-          errorMessage = data.message || "Invalid data provided. Please check your file format.";
+          errorMessage =
+            data.message ||
+            "Invalid data provided. Please check your file format.";
         } else if (status === 500) {
           errorMessage = "Server error occurred. Please try again later.";
         } else {
-          errorMessage = data.message || "An error occurred while uploading buyers.";
+          errorMessage =
+            data.message || "An error occurred while uploading buyers.";
         }
       }
-      
+
       toast.error(errorMessage);
       throw error;
     }

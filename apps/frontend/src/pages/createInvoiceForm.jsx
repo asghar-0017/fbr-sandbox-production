@@ -223,14 +223,10 @@ export default function CreateInvoice() {
   React.useEffect(() => {
     if (!tokensLoaded && selectedTenant) {
       const timeout = setTimeout(() => {
-        console.log(
-          "createInvoiceForm: Loading timeout reached - tokens still not loaded after 10 seconds"
-        );
         setLoadingTimeout(true);
 
         // Automatically retry token fetch when timeout is reached
         if (retryTokenFetch) {
-          console.log("Automatically retrying token fetch due to timeout");
           retryTokenFetch();
         }
       }, 10000); // 10 seconds timeout
@@ -259,24 +255,7 @@ export default function CreateInvoice() {
 
   // Update form data when selected tenant changes
   React.useEffect(() => {
-    console.log("SelectedCompany changed:", selectedTenant);
     if (selectedTenant) {
-      console.log("Company data fields:", {
-        sellerNTNCNIC: selectedTenant.sellerNTNCNIC,
-        sellerBusinessName: selectedTenant.sellerBusinessName,
-        sellerProvince: selectedTenant.sellerProvince,
-        sellerAddress: selectedTenant.sellerAddress,
-      });
-      console.log("Available provinces:", province);
-      console.log("Company province value:", selectedTenant.sellerProvince);
-      localStorage.setItem("sellerProvince", selectedTenant.sellerProvince);
-      console.log(
-        "Province match found:",
-        province.find(
-          (p) => p.stateProvinceDesc === selectedTenant.sellerProvince
-        )
-      );
-
       setFormData((prev) => ({
         ...prev,
         sellerNTNCNIC: selectedTenant.sellerNTNCNIC || "",
@@ -294,7 +273,7 @@ export default function CreateInvoice() {
         sellerAddress: "",
       }));
     }
-  }, [selectedTenant, province]);
+  }, [selectedTenant]); // Removed province dependency to prevent infinite loops
 
   // Check for draft invoice data to edit
   React.useEffect(() => {
@@ -302,7 +281,6 @@ export default function CreateInvoice() {
     if (editInvoiceData) {
       try {
         const invoiceData = JSON.parse(editInvoiceData);
-        console.log("Loading draft invoice data for editing:", invoiceData);
         // Track editing draft id
         if (invoiceData.id) {
           setEditingId(invoiceData.id);
@@ -413,10 +391,6 @@ export default function CreateInvoice() {
         if (directTransctypeId) {
           localStorage.setItem("transactionTypeId", directTransctypeId);
           setTransactionTypeId(directTransctypeId);
-          console.log(
-            "Set transactionTypeId directly from transctypeId:",
-            directTransctypeId
-          );
         }
         if (scenarioId) {
           // Set transactionTypeId based on scenario
@@ -445,10 +419,6 @@ export default function CreateInvoice() {
           if (transactionTypeId) {
             localStorage.setItem("transactionTypeId", transactionTypeId);
             setTransactionTypeId(transactionTypeId);
-            console.log(
-              "Set transactionTypeId for editing:",
-              transactionTypeId
-            );
           }
         }
 
@@ -471,11 +441,6 @@ export default function CreateInvoice() {
           // This will be handled by the RateSelector component when it loads
           // For now, we'll set a flag to indicate we're editing
           localStorage.setItem("editingInvoice", "true");
-          console.log(
-            "Set editing flag for invoice with rate:",
-            invoiceData.items[0].rate
-          );
-          console.log("Rate field will be preserved during editing mode");
         }
 
         // Set buyer ID for editing - this is the key fix for buyer data not coming
@@ -492,32 +457,6 @@ export default function CreateInvoice() {
             })
           );
         }
-
-        // Debug logging for edit data
-        console.log("Edit data summary:", {
-          transctypeId:
-            invoiceData.transctypeId ||
-            invoiceData.scenario_id ||
-            invoiceData.scenarioId,
-          transactionTypeId: transactionTypeId,
-          hasItems: invoiceData.items && invoiceData.items.length > 0,
-          firstItemRate:
-            invoiceData.items && invoiceData.items.length > 0
-              ? invoiceData.items[0].rate
-              : null,
-          firstItemSRO:
-            invoiceData.items && invoiceData.items.length > 0
-              ? invoiceData.items[0].sroScheduleNo
-              : null,
-          firstItemSROItem:
-            invoiceData.items && invoiceData.items.length > 0
-              ? invoiceData.items[0].sroItemSerialNo
-              : null,
-          buyerData: {
-            buyerNTNCNIC: invoiceData.buyerNTNCNIC,
-            buyerBusinessName: invoiceData.buyerBusinessName,
-          },
-        });
 
         // Clear the localStorage data after loading (keep id in state)
         localStorage.removeItem("editInvoiceData");
@@ -543,8 +482,6 @@ export default function CreateInvoice() {
     if (editingBuyerData && buyers.length > 0) {
       try {
         const buyerData = JSON.parse(editingBuyerData);
-        console.log("Looking for buyer in loaded buyers:", buyerData);
-        console.log("Available buyers:", buyers);
 
         // Find the buyer by matching NTN/CNIC and business name
         const matchingBuyer = buyers.find(
@@ -554,10 +491,7 @@ export default function CreateInvoice() {
         );
 
         if (matchingBuyer) {
-          console.log("Found matching buyer:", matchingBuyer);
           setSelectedBuyerId(matchingBuyer.id);
-        } else {
-          console.warn("No matching buyer found for editing data:", buyerData);
         }
 
         // Clear the editing buyer data
@@ -573,7 +507,6 @@ export default function CreateInvoice() {
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
     if (isEditing && formData.items && formData.items.length > 0) {
-      console.log("Fixing unit cost calculation for editing mode");
       setFormData((prev) => {
         const updatedItems = prev.items.map((item) => {
           if (item.retailPrice && item.quantity && !item.isValueSalesManual) {
@@ -582,9 +515,6 @@ export default function CreateInvoice() {
             );
             const quantity = parseFloat(item.quantity || 0);
             const unitCost = quantity > 0 ? retailPrice / quantity : 0;
-            console.log(
-              `Recalculating unit cost for editing: ${retailPrice} ÷ ${quantity} = ${unitCost.toFixed(2)}`
-            );
             return {
               ...item,
               unitPrice: unitCost.toFixed(2),
@@ -596,39 +526,27 @@ export default function CreateInvoice() {
         return { ...prev, items: updatedItems };
       });
     }
-  }, [formData.items]);
+  }, []); // Run only once on mount to fix editing mode
 
   // Ensure rate field is properly set when editing
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
     if (isEditing && formData.items && formData.items.length > 0) {
-      console.log("Ensuring rate field is properly set for editing mode");
       // The rate field should already be set from the form data initialization
       // This effect ensures that if there are any timing issues, the rate is preserved
       const hasRateValues = formData.items.some(
         (item) => item.rate && item.rate.trim() !== ""
       );
       if (hasRateValues) {
-        console.log(
-          "Rate values found in form data:",
-          formData.items.map((item) => item.rate)
-        );
         // Ensure the editing flag is maintained until rates are loaded
         localStorage.setItem("editingInvoice", "true");
       }
     }
-  }, [formData.items]);
+  }, []); // Run only once on mount for editing mode
 
   React.useEffect(() => {
-    console.log("useEffect triggered - selectedTenant:", selectedTenant);
-    console.log("Tokens loaded:", tokensLoaded);
-
-    // Debug token manager state
-    debugTokenManager();
-
     // Don't make API calls if tenant is not selected
     if (!selectedTenant) {
-      console.log("Skipping API calls - no tenant selected");
       setAllLoading(false);
       return;
     }
@@ -638,16 +556,12 @@ export default function CreateInvoice() {
       API_CONFIG.getCurrentToken("sandbox") ||
       localStorage.getItem("sandboxProductionToken");
     if (!token) {
-      console.log(
-        "Skipping API calls - no token available, waiting for token to load"
-      );
       setAllLoading(false);
       return;
     }
 
     // Add a small delay to ensure token manager is properly updated
     const timer = setTimeout(() => {
-      console.log("Starting API calls after token manager update delay");
       setAllLoading(true);
 
       Promise.allSettled([
@@ -660,10 +574,6 @@ export default function CreateInvoice() {
         (async () => {
           try {
             const token = API_CONFIG.getCurrentToken("sandbox");
-            console.log(
-              "Token for doctypecode API:",
-              token ? "Available" : "Not available"
-            );
 
             if (!token) {
               console.error("No token available for doctypecode API");
@@ -705,76 +615,27 @@ export default function CreateInvoice() {
         (async () => {
           try {
             const data = await getTransactionTypes();
-            console.log("Transaction types from API:", data);
 
             // Handle different possible response structures
             let transactionTypesArray = [];
 
             if (Array.isArray(data)) {
               transactionTypesArray = data;
-              console.log("Setting transaction types with array data:", data);
             } else if (data && typeof data === "object") {
               // Check if data is wrapped in a response object
               if (data.data && Array.isArray(data.data)) {
                 transactionTypesArray = data.data;
-                console.log(
-                  "Setting transaction types from data.data:",
-                  data.data
-                );
               } else if (
                 data.transactionTypes &&
                 Array.isArray(data.transactionTypes)
               ) {
                 transactionTypesArray = data.transactionTypes;
-                console.log(
-                  "Setting transaction types from data.transactionTypes:",
-                  data.transactionTypes
-                );
               } else if (data.results && Array.isArray(data.results)) {
                 transactionTypesArray = data.results;
-                console.log(
-                  "Setting transaction types from data.results:",
-                  data.results
-                );
               } else {
                 // If it's a single object, wrap it in an array
                 transactionTypesArray = [data];
-                console.log(
-                  "Setting transaction types with single object wrapped in array:",
-                  [data]
-                );
               }
-            }
-
-            // Log the structure of the first item
-            if (transactionTypesArray.length > 0) {
-              console.log(
-                "First transaction type structure:",
-                transactionTypesArray[0]
-              );
-              console.log(
-                "Available keys in first item:",
-                Object.keys(transactionTypesArray[0])
-              );
-
-              // Check for different possible property names
-              const firstItem = transactionTypesArray[0];
-              const possibleIdKeys = [
-                "transactioN_TYPE_ID",
-                "transactionTypeId",
-                "transaction_type_id",
-                "transactionTypeID",
-                "id",
-                "typeId",
-                "transTypeId",
-              ];
-
-              console.log("Checking for ID property names:");
-              possibleIdKeys.forEach((key) => {
-                if (firstItem.hasOwnProperty(key)) {
-                  console.log(`Found property "${key}":`, firstItem[key]);
-                }
-              });
             }
 
             setTransactionTypes(transactionTypesArray);
@@ -794,13 +655,8 @@ export default function CreateInvoice() {
     if (selectedTenant && tokensLoaded) {
       const token = API_CONFIG.getCurrentToken("sandbox");
       if (!token) {
-        console.log(
-          "Token not available despite tokensLoaded=true, this might indicate a race condition"
-        );
+        // Token not available despite tokensLoaded=true, this might indicate a race condition
         // Don't automatically retry - let the user handle it manually if needed
-        console.log(
-          "Consider using the 'Retry Loading Credentials' button if data doesn't load"
-        );
       } else {
         // Token is available, clear any loading timeout
         setLoadingTimeout(false);
@@ -815,12 +671,8 @@ export default function CreateInvoice() {
         API_CONFIG.getCurrentToken("sandbox") ||
         localStorage.getItem("sandboxProductionToken");
       if (token && !allLoading && !tokensLoaded) {
-        console.log(
-          "Token available but tokensLoaded is false, starting data loading"
-        );
         // Trigger the data loading effect
         const timer = setTimeout(() => {
-          console.log("Starting API calls after token availability check");
           setAllLoading(true);
 
           Promise.allSettled([
@@ -836,10 +688,6 @@ export default function CreateInvoice() {
             (async () => {
               try {
                 const token = API_CONFIG.getCurrentToken("sandbox");
-                console.log(
-                  "Token for doctypecode API:",
-                  token ? "Available" : "Not available"
-                );
 
                 if (!token) {
                   console.error("No token available for doctypecode API");
@@ -881,79 +729,27 @@ export default function CreateInvoice() {
             (async () => {
               try {
                 const data = await getTransactionTypes();
-                console.log("Transaction types from API:", data);
 
                 // Handle different possible response structures
                 let transactionTypesArray = [];
 
                 if (Array.isArray(data)) {
                   transactionTypesArray = data;
-                  console.log(
-                    "Setting transaction types with array data:",
-                    data
-                  );
                 } else if (data && typeof data === "object") {
                   // Check if data is wrapped in a response object
                   if (data.data && Array.isArray(data.data)) {
                     transactionTypesArray = data.data;
-                    console.log(
-                      "Setting transaction types from data.data:",
-                      data.data
-                    );
                   } else if (
                     data.transactionTypes &&
                     Array.isArray(data.transactionTypes)
                   ) {
                     transactionTypesArray = data.transactionTypes;
-                    console.log(
-                      "Setting transaction types from data.transactionTypes:",
-                      data.transactionTypes
-                    );
                   } else if (data.results && Array.isArray(data.results)) {
                     transactionTypesArray = data.results;
-                    console.log(
-                      "Setting transaction types from data.results:",
-                      data.results
-                    );
                   } else {
                     // If it's a single object, wrap it in an array
                     transactionTypesArray = [data];
-                    console.log(
-                      "Setting transaction types with single object wrapped in array:",
-                      [data]
-                    );
                   }
-                }
-
-                // Log the structure of the first item
-                if (transactionTypesArray.length > 0) {
-                  console.log(
-                    "First transaction type structure:",
-                    transactionTypesArray[0]
-                  );
-                  console.log(
-                    "Available keys in first item:",
-                    Object.keys(transactionTypesArray[0])
-                  );
-
-                  // Check for different possible property names
-                  const firstItem = transactionTypesArray[0];
-                  const possibleIdKeys = [
-                    "transactioN_TYPE_ID",
-                    "transactionTypeId",
-                    "transaction_type_id",
-                    "transactionTypeID",
-                    "id",
-                    "typeId",
-                    "transTypeId",
-                  ];
-
-                  console.log("Checking for ID property names:");
-                  possibleIdKeys.forEach((key) => {
-                    if (firstItem.hasOwnProperty(key)) {
-                      console.log(`Found property "${key}":`, firstItem[key]);
-                    }
-                  });
                 }
 
                 setTransactionTypes(transactionTypesArray);
@@ -976,21 +772,12 @@ export default function CreateInvoice() {
     const currentTransctypeId = formData.transctypeId;
 
     if (isEditing && currentTransctypeId && transactionTypes.length > 0) {
-      console.log(
-        "Editing mode detected with transaction types data loaded, setting transactionTypeId for:",
-        currentTransctypeId
-      );
-
       // Set transactionTypeId based on transctypeId
       const newTransactionTypeId = currentTransctypeId;
 
       if (newTransactionTypeId) {
         localStorage.setItem("transactionTypeId", newTransactionTypeId);
         setTransactionTypeId(newTransactionTypeId);
-        console.log(
-          "Set transactionTypeId for editing after transaction types data loaded:",
-          newTransactionTypeId
-        );
       }
     }
   }, [transactionTypes, formData.transctypeId]);
@@ -1008,10 +795,6 @@ export default function CreateInvoice() {
 
       if (newTransactionTypeId) {
         setTransactionTypeId(newTransactionTypeId);
-        console.log(
-          "Fallback: Set transactionTypeId for editing:",
-          newTransactionTypeId
-        );
       }
     }
   }, [formData.transctypeId, transactionTypeId]);
@@ -1197,13 +980,9 @@ export default function CreateInvoice() {
         // Auto-set uoM to "Bill of lading" for transaction type when rate contains "/bill"
         if (value.includes("/bill")) {
           item.uoM = "Bill of lading";
-          console.log(
-            `Auto-setting uoM to "Bill of lading" for rate "${value}"`
-          );
         }
         if (value.includes("/SqY")) {
           item.uoM = "SqY";
-          console.log(`Auto-setting uoM to "SqY" for rate "${value}"`);
         }
       }
 
@@ -1231,30 +1010,18 @@ export default function CreateInvoice() {
         item.valueSalesExcludingST = retailPrice.toString();
 
         // Ensure unit cost is always calculated when retail price or quantity changes
-        if (field === "retailPrice" || field === "quantity") {
-          console.log(
-            `Recalculating unit cost: ${retailPrice} ÷ ${quantity} = ${unitCost.toFixed(2)}`
-          );
-        }
+        // Unit cost calculation completed
 
         // Only calculate sales tax if not manually entered
         if (!item.isSalesTaxManual) {
-          console.log("Auto calc - isSalesTaxManual is false");
           if (
             item.rate &&
             item.rate.toLowerCase() !== "exempt" &&
             item.rate !== "0%"
           ) {
-            console.log("Auto calc - Rate conditions passed:", item.rate);
             let salesTax = 0;
 
             // Check if rate is in "RS." format (fixed amount)
-            console.log(
-              "Auto calc - Checking rate:",
-              item.rate,
-              "Type:",
-              typeof item.rate
-            );
             if (
               item.rate &&
               (item.rate.includes("RS.") ||
@@ -1263,10 +1030,6 @@ export default function CreateInvoice() {
             ) {
               const fixedAmount =
                 parseFloat(item.rate.replace(/RS\./i, "").trim()) || 0;
-              console.log(
-                "Auto calc - RS. format detected, fixedAmount:",
-                fixedAmount
-              );
               salesTax = fixedAmount; // Fixed amount directly
             } else if (item.rate.includes("/bill")) {
               const fixedAmount =
@@ -1295,22 +1058,14 @@ export default function CreateInvoice() {
       } else if (item.isValueSalesManual) {
         // If user manually entered value sales, only calculate sales tax if not manually entered
         if (!item.isSalesTaxManual) {
-          console.log("Manual calc - isSalesTaxManual is false");
           if (
             item.rate &&
             item.rate.toLowerCase() !== "exempt" &&
             item.rate !== "0%"
           ) {
-            console.log("Manual calc - Rate conditions passed:", item.rate);
             let salesTax = 0;
 
             // Check if rate is in "RS." format (fixed amount)
-            console.log(
-              "Manual calc - Checking rate:",
-              item.rate,
-              "Type:",
-              typeof item.rate
-            );
             if (
               item.rate &&
               (item.rate.includes("RS.") ||
@@ -1319,10 +1074,6 @@ export default function CreateInvoice() {
             ) {
               const fixedAmount =
                 parseFloat(item.rate.replace(/RS\./i, "").trim()) || 0;
-              console.log(
-                "Manual calc - RS. format detected, fixedAmount:",
-                fixedAmount
-              );
               salesTax = fixedAmount; // Fixed amount directly
             } else if (item.rate.includes("/bill")) {
               const fixedAmount =
@@ -1520,8 +1271,6 @@ export default function CreateInvoice() {
   };
 
   const handleTransactionTypeChange = (transctypeId) => {
-    console.log("Selected transaction type ID:", transctypeId);
-
     if (!transctypeId) {
       setFormData((prev) => ({
         ...prev,
@@ -1609,9 +1358,7 @@ export default function CreateInvoice() {
 
     const saleType = getTransactionTypeDesc(selectedTransactionType) || "";
 
-    console.log("Selected transaction type:", selectedTransactionType);
-    console.log("Sale type:", saleType);
-    console.log("Transaction type ID:", transctypeId);
+    // Transaction type change processed
 
     // Update localStorage and state
     localStorage.setItem("saleType", saleType);
@@ -2087,14 +1834,8 @@ export default function CreateInvoice() {
         ),
       };
 
-      // Debug: Log the cleaned data being sent
-      console.log(
-        "Cleaned data being sent to FBR validation:",
-        JSON.stringify(cleanedData, null, 2)
-      );
-
+      // Token for FBR validation
       const token = API_CONFIG.getCurrentToken("sandbox");
-      console.log("Token used:", token ? "Available" : "Not available");
 
       // First, validate with FBR API
       const validateRes = await postData(
@@ -2374,14 +2115,7 @@ export default function CreateInvoice() {
             : []),
         ];
 
-        // Debug: Log validation fields for this item
-        console.log(`Validation for item ${index + 1}:`, {
-          item: item,
-          requiredFields: itemRequiredFields,
-          billOfLadingUoM: item.billOfLadingUoM,
-          rate: item.rate,
-          transctypeId: formData.transctypeId,
-        });
+        // Validation check for item
 
         for (const { field, message } of itemRequiredFields) {
           if (
@@ -2389,10 +2123,6 @@ export default function CreateInvoice() {
             (field === "valueSalesExcludingST" && item[field] <= 0) ||
             (field === "retailPrice" && parseFloat(item[field]) <= 0)
           ) {
-            console.log(`Validation failed for field '${field}':`, {
-              value: item[field],
-              message: message,
-            });
             Swal.fire({
               icon: "error",
               title: "Error",
@@ -2424,24 +2154,15 @@ export default function CreateInvoice() {
           },
           index
         ) => {
-          // Debug: Log the original billOfLadingUoM value
-          console.log(`Data cleaning for item ${index}:`, {
-            originalBillOfLadingUoM: rest.billOfLadingUoM,
-            trimmedBillOfLadingUoM: rest.billOfLadingUoM?.trim(),
-            finalBillOfLadingUoM: rest.billOfLadingUoM?.trim() || null,
-          });
+          // Data cleaning for item
 
           // Special handling for uoM based on rate content
           let uoMValue = rest.uoM?.trim() || null;
           if (rest.rate && rest.rate.includes("/bill")) {
             uoMValue = "Bill of lading";
-            console.log(
-              `Forcing uoM to "Bill of lading" for rate "${rest.rate}"`
-            );
           }
           if (rest.rate && rest.rate.includes("/SqY")) {
             uoMValue = "SqY";
-            console.log(`Forcing uoM to "SqY" for rate "${rest.rate}"`);
           }
 
           const baseItem = {
@@ -2487,23 +2208,12 @@ export default function CreateInvoice() {
         items: cleanedItems,
       };
 
-      // Debug: Log the cleaned data being sent to FBR
-      console.log(
-        "Cleaned data being sent to FBR:",
-        JSON.stringify(cleanedData, null, 2)
-      );
-
-      const token = API_CONFIG.getCurrentToken("sandbox");
-      console.log("Token used:", token ? "Available" : "Not available");
-
       // STEP 1: Hit FBR API First
-      console.log("Step 1: Calling FBR API to submit invoice data...");
       const fbrResponse = await postData(
         "di_data/v1/di/postinvoicedata",
         cleanedData,
         "sandbox"
       );
-      console.log("FBR Response:", fbrResponse);
 
       // Handle different FBR response structures
       let fbrInvoiceNumber = null;
@@ -2535,18 +2245,12 @@ export default function CreateInvoice() {
         }
         // Check for empty response - this might be a successful submission
         else if (!fbrResponse.data || fbrResponse.data === "") {
-          console.log(
-            "FBR returned empty response with 200 status - treating as successful submission"
-          );
           isSuccess = true;
           fbrInvoiceNumber = `FBR_${Date.now()}`;
         }
         // If response is unexpected, treat as success if status is 200
         else {
           isSuccess = true;
-          console.log(
-            "FBR returned 200 status with unexpected response structure, treating as success"
-          );
         }
       }
 
@@ -2594,13 +2298,7 @@ export default function CreateInvoice() {
         );
       }
 
-      console.log("FBR API Success - Invoice Number:", fbrInvoiceNumber);
-
       // STEP 2: Hit Your Backend API Second
-      console.log(
-        "Step 2: Calling backend API to save invoice with FBR invoice number..."
-      );
-
       // Prepare data for backend with FBR invoice number
       // Note: We need to include the original form data fields that were removed during FBR cleaning
       const backendData = {
@@ -2612,18 +2310,11 @@ export default function CreateInvoice() {
         status: "posted", // Set status as posted since it's been submitted to FBR
       };
 
-      console.log(
-        "Backend data being sent:",
-        JSON.stringify(backendData, null, 2)
-      );
-
       // Call backend API to save invoice
       const backendResponse = await api.post(
         `/tenant/${selectedTenant.tenant_id}/invoices`,
         backendData
       );
-
-      console.log("Backend API Response:", backendResponse);
 
       if (backendResponse.status !== 200) {
         throw new Error(
@@ -2631,29 +2322,18 @@ export default function CreateInvoice() {
         );
       }
 
-      console.log(
-        "Backend API Success - Invoice saved with ID:",
-        backendResponse.data?.data?.invoice_id
-      );
-
       // STEP 3: Delete the saved invoice if it exists
       if (editingId) {
         try {
-          console.log("Step 3: Deleting saved invoice with ID:", editingId);
           const deleteResponse = await api.delete(
             `/tenant/${selectedTenant.tenant_id}/invoices/${editingId}`
           );
 
-          if (deleteResponse.status === 200) {
-            console.log("Saved invoice deleted successfully");
-          } else {
-            console.warn(
-              "Failed to delete saved invoice, but submission was successful"
-            );
+          if (deleteResponse.status !== 200) {
+            // Failed to delete saved invoice, but submission was successful
           }
         } catch (deleteError) {
-          console.warn("Error deleting saved invoice:", deleteError);
-          // Don't show error to user since the main submission was successful
+          // Error deleting saved invoice, but main submission was successful
         }
       }
 
@@ -2841,16 +2521,6 @@ export default function CreateInvoice() {
   }
 
   if (!tokensLoaded && selectedTenant) {
-    console.log(
-      "createInvoiceForm: Showing loading state - tokensLoaded:",
-      tokensLoaded
-    );
-    console.log(
-      "createInvoiceForm: selectedTenant:",
-      selectedTenant ? "exists" : "null"
-    );
-    console.log("createInvoiceForm: loadingTimeout:", loadingTimeout);
-
     return (
       <Box
         sx={{
@@ -3272,21 +2942,7 @@ export default function CreateInvoice() {
                     );
                   });
 
-                  console.log("Autocomplete value calculation:", {
-                    transactionTypeId,
-                    formDataTransctypeId: formData.transctypeId,
-                    effectiveId,
-                    effectiveIdType: typeof effectiveId,
-                    foundType,
-                    transactionTypesLength: transactionTypes.length,
-                    transactionTypesSample: transactionTypes
-                      .slice(0, 3)
-                      .map((t) => ({
-                        id: getTransactionTypeId(t),
-                        idType: typeof getTransactionTypeId(t),
-                        desc: getTransactionTypeDesc(t),
-                      })),
-                  });
+                  // Autocomplete value calculation completed
                   return foundType || null;
                 })()}
                 onChange={(event, newValue) => {

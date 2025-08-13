@@ -1,6 +1,6 @@
 // Shared utilities and constants
 export const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://united-tubes.inplsoftwares.online' 
+  ? 'https://test-instance.inplsoftwares.online' 
   : 'http://localhost:3003';
 
 export const FBR_API_URL = 'https://gw.fbr.gov.pk';

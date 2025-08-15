@@ -43,7 +43,7 @@ app.use(
     origin: [
       "http://localhost:5174",
       "https://adnan-power.inplsoftwares.online",
-      "http://localhost:5150",
+      "https://adnan-power.inplsoftwares.online",
       "https://fbrtestcase.inplsoftwares.online",
       "*",
     ],

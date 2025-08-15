@@ -1,9 +1,14 @@
-import axios from 'axios';
+import axios from "axios";
 
 // FBR API base URL
-const FBR_BASE_URL = 'https://gw.fbr.gov.pk';
+const FBR_BASE_URL = "https://gw.fbr.gov.pk";
 
-export const postData = async (endpoint, data, environment = 'sandbox', token = null) => {
+export const postData = async (
+  endpoint,
+  data,
+  environment = "sandbox",
+  token = null
+) => {
   if (!token) {
     throw new Error(`No ${environment} token provided for FBR API calls`);
   }
@@ -11,7 +16,7 @@ export const postData = async (endpoint, data, environment = 'sandbox', token = 
   const config = {
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   };
 
@@ -22,18 +27,18 @@ export const postData = async (endpoint, data, environment = 'sandbox', token = 
       config
     );
 
-    console.log('FBR API Response:', {
+    console.log("FBR API Response:", {
       endpoint,
       status: response.status,
       data: response.data,
       dataType: typeof response.data,
       dataLength: response.data ? response.data.length : 0,
-      headers: response.headers
+      headers: response.headers,
     });
 
     return response;
   } catch (error) {
-    console.error('FBR API Error:', {
+    console.error("FBR API Error:", {
       endpoint,
       message: error.message,
       status: error.response?.status,
@@ -43,7 +48,11 @@ export const postData = async (endpoint, data, environment = 'sandbox', token = 
   }
 };
 
-export const fetchData = async (endpoint, environment = 'sandbox', token = null) => {
+export const fetchData = async (
+  endpoint,
+  environment = "sandbox",
+  token = null
+) => {
   if (!token) {
     throw new Error(`No ${environment} token provided for FBR API calls`);
   }
@@ -55,20 +64,17 @@ export const fetchData = async (endpoint, environment = 'sandbox', token = null)
   };
 
   try {
-    const response = await axios.get(
-      `${FBR_BASE_URL}/${endpoint}`,
-      config
-    );
+    const response = await axios.get(`${FBR_BASE_URL}/${endpoint}`, config);
 
-    console.log('FBR API Response:', {
+    console.log("FBR API Response:", {
       endpoint,
       status: response.status,
-      data: response.data
+      data: response.data,
     });
 
     return response.data;
   } catch (error) {
-    console.error('FBR API Error:', {
+    console.error("FBR API Error:", {
       endpoint,
       message: error.message,
       status: error.response?.status,
@@ -76,4 +82,4 @@ export const fetchData = async (endpoint, environment = 'sandbox', token = null)
     });
     throw error;
   }
-}; 
+};

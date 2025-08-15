@@ -99,7 +99,7 @@ export default function BuyerTable({
             >
               <TableHead>
                 <TableRow sx={{ background: "#EDEDED" }}>
-                  {[...Array(6)].map((_, index) => (
+                  {[...Array(7)].map((_, index) => (
                     <TableCell key={index}>
                       <Skeleton variant="text" width={80} height={20} />
                     </TableCell>
@@ -109,11 +109,11 @@ export default function BuyerTable({
               <TableBody>
                 {[...Array(5)].map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {[...Array(6)].map((_, colIndex) => (
+                    {[...Array(7)].map((_, colIndex) => (
                       <TableCell key={`${rowIndex}-${colIndex}`}>
                         <Skeleton
                           variant="text"
-                          width={colIndex === 5 ? 120 : 100}
+                          width={colIndex === 6 ? 120 : 100}
                           height={16}
                         />
                       </TableCell>
@@ -243,6 +243,7 @@ export default function BuyerTable({
                   <TableHead>
                     <TableRow sx={{ background: "#EDEDED" }}>
                       {[
+                        "S.No",
                         "NTN/CNIC",
                         "Business Name",
                         "Province",
@@ -253,6 +254,7 @@ export default function BuyerTable({
                         <TableCell
                           key={heading}
                           align={
+                            heading === "S.No" ||
                             heading === "NTN/CNIC" ||
                             heading === "Business Name"
                               ? "left"
@@ -280,6 +282,13 @@ export default function BuyerTable({
                           },
                         }}
                       >
+                        <TableCell
+                          component="th"
+                          scope="row"
+                          sx={{ fontWeight: 700, fontSize: 13 }}
+                        >
+                          {(page - 1) * rowsPerPage + index + 1}
+                        </TableCell>
                         <TableCell
                           component="th"
                           scope="row"

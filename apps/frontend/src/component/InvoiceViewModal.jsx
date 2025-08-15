@@ -27,6 +27,23 @@ const formatNumberWithCommas = (number) => {
   });
 };
 
+// Helper function to format date to dd-mm-yyyy
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A";
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`;
+  } catch (error) {
+    return "N/A";
+  }
+};
+
 const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
   if (!invoice) return null;
 
@@ -64,7 +81,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
     0
   );
 
-  // Convert number to words function
+  // Convert number to words function (Western Numbering System)
   const convertToWords = (num) => {
     const ones = [
       "",
@@ -117,9 +134,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
         return (
           ones[Math.floor(num / 100)] +
           " Hundred" +
-          (num % 100 !== 0
-            ? " and " + convertLessThanOneThousand(num % 100)
-            : "")
+          (num % 100 !== 0 ? " " + convertLessThanOneThousand(num % 100) : "")
         );
     };
 
@@ -130,7 +145,8 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
 
     if (numStr.length <= 3) {
       return convertLessThanOneThousand(parseInt(numStr));
-    } else if (numStr.length <= 5) {
+    } else if (numStr.length <= 6) {
+      // Thousands (1,000 to 999,999)
       const thousands = parseInt(numStr.slice(0, -3));
       const remainder = parseInt(numStr.slice(-3));
       return (
@@ -138,22 +154,34 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
         " Thousand" +
         (remainder !== 0 ? " " + convertLessThanOneThousand(remainder) : "")
       );
-    } else if (numStr.length <= 7) {
-      const lakhs = parseInt(numStr.slice(0, -5));
-      const remainder = parseInt(numStr.slice(-5));
+    } else if (numStr.length <= 9) {
+      // Millions (1,000,000 to 999,999,999)
+      const millions = parseInt(numStr.slice(0, -6));
+      const remainder = parseInt(numStr.slice(-6));
       return (
-        convertLessThanOneThousand(lakhs) +
-        " Lakh" +
-        (lakhs !== 1 ? "s" : "") +
+        convertLessThanOneThousand(millions) +
+        " Million" +
+        (millions !== 1 ? "s" : "") +
+        (remainder !== 0 ? " " + convertToWords(remainder) : "")
+      );
+    } else if (numStr.length <= 12) {
+      // Billions (1,000,000,000 to 999,999,999,999)
+      const billions = parseInt(numStr.slice(0, -9));
+      const remainder = parseInt(numStr.slice(-9));
+      return (
+        convertLessThanOneThousand(billions) +
+        " Billion" +
+        (billions !== 1 ? "s" : "") +
         (remainder !== 0 ? " " + convertToWords(remainder) : "")
       );
     } else {
-      const crores = parseInt(numStr.slice(0, -7));
-      const remainder = parseInt(numStr.slice(-7));
+      // Trillions and beyond
+      const trillions = parseInt(numStr.slice(0, -12));
+      const remainder = parseInt(numStr.slice(-12));
       return (
-        convertLessThanOneThousand(crores) +
-        " Crore" +
-        (crores !== 1 ? "s" : "") +
+        convertLessThanOneThousand(trillions) +
+        " Trillion" +
+        (trillions !== 1 ? "s" : "") +
         (remainder !== 0 ? " " + convertToWords(remainder) : "")
       );
     }
@@ -256,7 +284,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             </Box>
             <Box className="section">
               <Typography variant="body2">
-                <strong>Date:</strong> {invoice.invoiceDate}
+                <strong>Date:</strong> {formatDate(invoice.invoiceDate)}
               </Typography>
             </Box>
           </Box>
@@ -671,7 +699,10 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             <Typography variant="body2" sx={{ fontWeight: "bold" }}>
               Total in words:
               <br />
-              {convertToWords(grandTotal)} Rupees Only
+              {convertToWords(grandTotal)
+                .toLowerCase()
+                .replace(/^\w/, (c) => c.toUpperCase())}{" "}
+              Rupees Only
             </Typography>
           </Box>
 

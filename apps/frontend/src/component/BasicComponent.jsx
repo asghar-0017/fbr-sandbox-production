@@ -60,6 +60,23 @@ export default function BasicTable() {
 
   const apiKey = API_CONFIG.apiKeyLocal;
 
+  // Helper function to format date to dd-mm-yyyy
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "N/A";
+
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      return "N/A";
+    }
+  };
+
   // Helper function to get status color
   const getStatusColor = (status) => {
     switch (status) {
@@ -422,7 +439,7 @@ export default function BasicTable() {
             >
               <TableHead>
                 <TableRow sx={{ background: "#EDEDED" }}>
-                  {[...Array(9)].map((_, index) => (
+                  {[...Array(10)].map((_, index) => (
                     <TableCell key={index}>
                       <Skeleton variant="text" width={80} height={20} />
                     </TableCell>
@@ -432,11 +449,11 @@ export default function BasicTable() {
               <TableBody>
                 {[...Array(5)].map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {[...Array(9)].map((_, colIndex) => (
+                    {[...Array(10)].map((_, colIndex) => (
                       <TableCell key={`${rowIndex}-${colIndex}`}>
                         <Skeleton
                           variant="text"
-                          width={colIndex === 8 ? 120 : 100}
+                          width={colIndex === 9 ? 120 : 100}
                           height={16}
                         />
                       </TableCell>
@@ -630,6 +647,7 @@ export default function BasicTable() {
                       }}
                     >
                       {[
+                        "S.No",
                         "System ID",
                         "Invoice Number",
                         "Invoice Date",
@@ -643,6 +661,7 @@ export default function BasicTable() {
                         <TableCell
                           key={heading}
                           align={
+                            heading === "S.No" ||
                             heading === "System ID" ||
                             heading === "Invoice Number" ||
                             heading === "Invoice Date"
@@ -672,6 +691,17 @@ export default function BasicTable() {
                           },
                         }}
                       >
+                        <TableCell
+                          component="th"
+                          scope="row"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: "#666",
+                          }}
+                        >
+                          {(page - 1) * rowsPerPage + index + 1}
+                        </TableCell>
                         <TableCell
                           component="th"
                           scope="row"
@@ -739,7 +769,7 @@ export default function BasicTable() {
                           scope="row"
                           sx={{ fontWeight: 500 }}
                         >
-                          {row.invoiceDate}
+                          {formatDate(row.invoiceDate)}
                         </TableCell>
                         <TableCell align="center" sx={{ fontWeight: 500 }}>
                           {row.invoiceType || "N/A"}

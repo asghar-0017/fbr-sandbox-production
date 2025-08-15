@@ -930,6 +930,27 @@ export const printInvoice = async (req, res) => {
 
     const plainInvoice = invoiceWithItems.get({ plain: true });
     plainInvoice.items = plainInvoice.InvoiceItems || []; // 👈 normalize for EJS
+
+    // Format date to dd-mm-yyyy
+    const formatDate = (dateString) => {
+      if (!dateString) return "N/A";
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "N/A";
+
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+
+        return `${day}-${month}-${year}`;
+      } catch (error) {
+        return "N/A";
+      }
+    };
+
+    // Format the invoice date
+    plainInvoice.invoiceDate = formatDate(plainInvoice.invoiceDate);
+
     // Render EJS HTML
     const html = await ejs.renderFile(
       path.join(process.cwd(), "src", "views", "invoiceTemplate.ejs"),

@@ -23,6 +23,7 @@ import {
   CreditCard,
   LocationOn,
   Map as MapIcon,
+  ErrorOutline as ErrorOutlineIcon,
 } from "@mui/icons-material";
 import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -202,6 +203,155 @@ export default function CreateInvoice() {
   const [editingItemIndex, setEditingItemIndex] = React.useState(null);
 
   const [transactionTypes, setTransactionTypes] = React.useState([]);
+  const [transactionTypesError, setTransactionTypesError] =
+    React.useState(null);
+  const [transactionTypesLoading, setTransactionTypesLoading] =
+    React.useState(false);
+
+  // State for transaction type dropdown
+  const [transactionTypeDropdownOpen, setTransactionTypeDropdownOpen] =
+    React.useState(false);
+
+  // Debug effect to monitor transactionTypes state
+  React.useEffect(() => {
+    console.log("TransactionTypes state changed:", transactionTypes);
+    console.log("TransactionTypes length:", transactionTypes?.length || 0);
+    console.log("TransactionTypes error:", transactionTypesError);
+  }, [transactionTypes, transactionTypesError]);
+
+  // Function to handle transaction type button click
+  const handleTransactionTypeButtonClick = async () => {
+    if (transactionTypes.length === 0 && !transactionTypesLoading) {
+      // Check if we have the required dependencies
+      if (!selectedTenant || !tokensLoaded) {
+        setTransactionTypesError(
+          "Please ensure a Company is selected and credentials are loaded."
+        );
+        return;
+      }
+
+      // Ensure we have a token before calling API
+      const token =
+        API_CONFIG.getCurrentToken("sandbox") ||
+        localStorage.getItem("sandboxProductionToken");
+      if (!token) {
+        setTransactionTypesError(
+          "No FBR token found. Please ensure the Company is selected and credentials are loaded."
+        );
+        return;
+      }
+
+      // If no transaction types loaded, fetch them first
+      setTransactionTypesLoading(true);
+      setTransactionTypesError(null);
+
+      try {
+        const data = await getTransactionTypes();
+        let transactionTypesArray = [];
+
+        if (Array.isArray(data)) {
+          transactionTypesArray = data;
+        } else if (data && typeof data === "object") {
+          if (data.data && Array.isArray(data.data)) {
+            transactionTypesArray = data.data;
+          } else if (
+            data.transactionTypes &&
+            Array.isArray(data.transactionTypes)
+          ) {
+            transactionTypesArray = data.transactionTypes;
+          } else if (data.results && Array.isArray(data.results)) {
+            transactionTypesArray = data.results;
+          } else {
+            transactionTypesArray = [data];
+          }
+        }
+
+        if (transactionTypesArray.length > 0) {
+          setTransactionTypes(transactionTypesArray);
+          setTransactionTypeDropdownOpen(true);
+        } else {
+          setTransactionTypesError("API returned empty transaction types list");
+        }
+      } catch (error) {
+        setTransactionTypesError(
+          error.message ||
+            "Failed to fetch transaction types from API. Please check your connection and try again."
+        );
+      } finally {
+        setTransactionTypesLoading(false);
+      }
+    } else {
+      // If transaction types are already loaded, just open the dropdown
+      setTransactionTypeDropdownOpen(true);
+    }
+  };
+
+  // Fetch transaction types from API - now triggered by button click instead of automatic
+  // React.useEffect(() => {
+  //   const fetchTransactionTypes = async () => {
+  //     // Only fetch when tenant and tokens are ready
+  //     if (!selectedTenant || !tokensLoaded) {
+  //       return;
+  //     }
+
+  //     // Ensure we have a token before calling API to avoid spurious errors on refresh
+  //     const token =
+  //       API_CONFIG.getCurrentToken("sandbox") ||
+  //       localStorage.getItem("sandboxProductionToken");
+  //     if (!token) {
+  //       return;
+  //     }
+
+  //     console.log("Fetching transaction types from API...");
+  //     setTransactionTypesLoading(true);
+  //     setTransactionTypesError(null);
+
+  //     try {
+  //       const data = await getTransactionTypes();
+
+  //       // Handle different possible response structures
+  //       let transactionTypesArray = [];
+
+  //       if (Array.isArray(data)) {
+  //         transactionTypesArray = data;
+  //       } else if (data && typeof data === "object") {
+  //         // Check if data is wrapped in a response object
+  //         if (data.data && Array.isArray(data.data)) {
+  //           transactionTypesArray = data.data;
+  //         } else if (
+  //           data.transactionTypes &&
+  //           Array.isArray(data.transactionTypes)
+  //         ) {
+  //           transactionTypesArray = data.transactionTypes;
+  //         } else if (data.results && Array.isArray(data.results)) {
+  //           transactionTypesArray = data.results;
+  //         } else {
+  //           // If it's a single object, wrap it in an array
+  //           transactionTypesArray = [data];
+  //         }
+  //       }
+
+  //       console.log("Transaction types from API:", transactionTypesArray);
+
+  //       if (transactionTypesArray.length > 0) {
+  //         setTransactionTypes(transactionTypesArray);
+  //       } else {
+  //         setTransactionTypesError("API returned empty transaction types list");
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching transaction types:", error);
+  //       setTransactionTypesError(
+  //         error.message ||
+  //           "Failed to fetch transaction types from API. Please check your connection and try again."
+  //       );
+  //     } finally {
+  //       setTransactionTypesLoading(false);
+  //     }
+  //   };
+
+  //   fetchTransactionTypes();
+  // }, [selectedTenant, tokensLoaded]);
+
   const [loading, setLoading] = React.useState(false);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [saveValidateLoading, setSaveValidateLoading] = React.useState(false);
@@ -612,38 +762,8 @@ export default function CreateInvoice() {
             ]);
           }
         })(),
-        (async () => {
-          try {
-            const data = await getTransactionTypes();
-
-            // Handle different possible response structures
-            let transactionTypesArray = [];
-
-            if (Array.isArray(data)) {
-              transactionTypesArray = data;
-            } else if (data && typeof data === "object") {
-              // Check if data is wrapped in a response object
-              if (data.data && Array.isArray(data.data)) {
-                transactionTypesArray = data.data;
-              } else if (
-                data.transactionTypes &&
-                Array.isArray(data.transactionTypes)
-              ) {
-                transactionTypesArray = data.transactionTypes;
-              } else if (data.results && Array.isArray(data.results)) {
-                transactionTypesArray = data.results;
-              } else {
-                // If it's a single object, wrap it in an array
-                transactionTypesArray = [data];
-              }
-            }
-
-            setTransactionTypes(transactionTypesArray);
-          } catch (error) {
-            console.error("Error fetching transaction types:", error);
-            setTransactionTypes([]);
-          }
-        })(),
+        // Transaction types will be loaded by the ensureTransactionTypes useEffect
+        Promise.resolve([]),
       ]).finally(() => setAllLoading(false));
     }, 100);
 
@@ -726,38 +846,8 @@ export default function CreateInvoice() {
                 ]);
               }
             })(),
-            (async () => {
-              try {
-                const data = await getTransactionTypes();
-
-                // Handle different possible response structures
-                let transactionTypesArray = [];
-
-                if (Array.isArray(data)) {
-                  transactionTypesArray = data;
-                } else if (data && typeof data === "object") {
-                  // Check if data is wrapped in a response object
-                  if (data.data && Array.isArray(data.data)) {
-                    transactionTypesArray = data.data;
-                  } else if (
-                    data.transactionTypes &&
-                    Array.isArray(data.transactionTypes)
-                  ) {
-                    transactionTypesArray = data.transactionTypes;
-                  } else if (data.results && Array.isArray(data.results)) {
-                    transactionTypesArray = data.results;
-                  } else {
-                    // If it's a single object, wrap it in an array
-                    transactionTypesArray = [data];
-                  }
-                }
-
-                setTransactionTypes(transactionTypesArray);
-              } catch (error) {
-                console.error("Error fetching transaction types:", error);
-                setTransactionTypes([]);
-              }
-            })(),
+            // Transaction types will be loaded by the ensureTransactionTypes useEffect
+            Promise.resolve([]),
           ]).finally(() => setAllLoading(false));
         }, 100);
 
@@ -2874,9 +2964,166 @@ export default function CreateInvoice() {
                 }
               />
             </Box>
-            <Box>
+            <Box sx={{ position: "relative" }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -31,
+                  right: 0,
+                  zIndex: 2,
+                  display: "none",
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleTransactionTypeButtonClick}
+                  disabled={transactionTypesLoading}
+                  startIcon={
+                    transactionTypesLoading ? (
+                      <CircularProgress size={14} />
+                    ) : null
+                  }
+                  sx={{
+                    color: "#007AFF",
+                    borderColor: "#007AFF",
+                    backgroundColor: "rgba(0, 122, 255, 0.05)",
+                    fontSize: "0.75rem",
+                    padding: "2px 4px",
+                    minWidth: "auto",
+                    height: "23px",
+                    "&:hover": {
+                      backgroundColor: "rgba(0, 122, 255, 0.1)",
+                      borderColor: "#0056CC",
+                    },
+                    "&:disabled": {
+                      color: "#9ca3af",
+                      borderColor: "#9ca3af",
+                      backgroundColor: "rgba(156, 163, 175, 0.05)",
+                    },
+                  }}
+                >
+                  Choose Transaction Type
+                </Button>
+              </Box>
+              {/* Transaction Type Error Display */}
+              {transactionTypesError && (
+                <Box
+                  sx={{
+                    mb: 1,
+                    p: 1.5,
+                    borderRadius: 1,
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    color: "#dc2626",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <ErrorOutlineIcon sx={{ fontSize: "1rem" }} />
+                    {transactionTypesError}
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      setTransactionTypesError(null);
+                      setTransactionTypesLoading(true);
+                      // Re-fetch transaction types
+                      const fetchTransactionTypes = async () => {
+                        try {
+                          const data = await getTransactionTypes();
+                          let transactionTypesArray = [];
+                          if (Array.isArray(data)) {
+                            transactionTypesArray = data;
+                          } else if (data && typeof data === "object") {
+                            if (data.data && Array.isArray(data.data)) {
+                              transactionTypesArray = data.data;
+                            } else if (
+                              data.transactionTypes &&
+                              Array.isArray(data.transactionTypes)
+                            ) {
+                              transactionTypesArray = data.transactionTypes;
+                            } else if (
+                              data.results &&
+                              Array.isArray(data.results)
+                            ) {
+                              transactionTypesArray = data.results;
+                            } else {
+                              transactionTypesArray = [data];
+                            }
+                          }
+                          if (transactionTypesArray.length > 0) {
+                            setTransactionTypes(transactionTypesArray);
+                          } else {
+                            setTransactionTypesError(
+                              "API returned empty transaction types list"
+                            );
+                          }
+                        } catch (error) {
+                          setTransactionTypesError(
+                            error.message ||
+                              "Failed to fetch transaction types from API. Please check your connection and try again."
+                          );
+                        } finally {
+                          setTransactionTypesLoading(false);
+                        }
+                      };
+                      fetchTransactionTypes();
+                    }}
+                    sx={{
+                      color: "#dc2626",
+                      borderColor: "#dc2626",
+                      "&:hover": {
+                        borderColor: "#b91c1c",
+                        backgroundColor: "rgba(220, 38, 38, 0.04)",
+                      },
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </Box>
+              )}
+
+              {/* Transaction Type Loading Display */}
+              {/* {transactionTypesLoading && (
+                <Box
+                  sx={{
+                    mb: 1,
+                    p: 1.5,
+                    borderRadius: 1,
+                    backgroundColor: "rgba(59, 130, 246, 0.1)",
+                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                    color: "#2563eb",
+                    fontSize: "0.875rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <CircularProgress size={16} />
+                  Loading transaction types from API...
+                </Box>
+              )} */}
+
               <Autocomplete
                 options={transactionTypes}
+                disabled={
+                  transactionTypesLoading ||
+                  !!transactionTypesError ||
+                  transactionTypes.length === 0
+                }
+                loading={transactionTypesLoading}
+                open={transactionTypeDropdownOpen}
+                onOpen={() => setTransactionTypeDropdownOpen(true)}
+                onClose={() => setTransactionTypeDropdownOpen(false)}
                 getOptionLabel={(option) => {
                   if (typeof option === "string") return option;
 
@@ -2966,12 +3213,68 @@ export default function CreateInvoice() {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Transaction Type"
+                    label={
+                      transactionTypesLoading
+                        ? "Loading Transaction Types..."
+                        : transactionTypesError
+                          ? "Transaction Type (Error)"
+                          : "Transaction Type"
+                    }
                     size="small"
                     sx={{
                       "& .MuiOutlinedInput-root": {
-                        "& fieldset": { borderColor: "#e5e7eb" },
+                        "& fieldset": {
+                          borderColor: transactionTypesError
+                            ? "#dc2626"
+                            : "#e5e7eb",
+                        },
                       },
+                    }}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {transactionTypesLoading ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTransactionTypeButtonClick();
+                            }}
+                            disabled={transactionTypesLoading}
+                            size="small"
+                            sx={{
+                              ml: 1,
+                              minWidth: "auto",
+                              height: 24,
+                              px: 1,
+                              fontSize: "0.72rem",
+                              color: "#007AFF",
+                              borderColor: "#007AFF",
+                              border: "1px solid",
+                              backgroundColor: "rgba(0, 122, 255, 0.05)",
+                              "&:hover": {
+                                backgroundColor: "rgba(0, 122, 255, 0.1)",
+                                borderColor: "#0056CC",
+                              },
+                              "&:disabled": {
+                                color: "#9ca3af",
+                                borderColor: "#9ca3af",
+                                backgroundColor: "rgba(156, 163, 175, 0.05)",
+                              },
+                            }}
+                            startIcon={
+                              transactionTypesLoading ? (
+                                <CircularProgress size={12} color="inherit" />
+                              ) : null
+                            }
+                          >
+                            Choose
+                          </Button>
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
                     }}
                   />
                 )}
@@ -3645,6 +3948,9 @@ export default function CreateInvoice() {
                   <TableHead>
                     <TableRow sx={{ background: "rgba(99, 102, 241, 0.1)" }}>
                       <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
+                        Item No
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
                         HS Code
                       </TableCell>
                       <TableCell sx={{ fontWeight: 700, fontSize: "0.875rem" }}>
@@ -3683,6 +3989,11 @@ export default function CreateInvoice() {
                           },
                         }}
                       >
+                        <TableCell
+                          sx={{ fontSize: "0.875rem", fontWeight: 600 }}
+                        >
+                          Item {index + 1}
+                        </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
                           {item.hsCode}
                         </TableCell>

@@ -38,7 +38,6 @@ const Buyers = () => {
 
   const handleSave = async (buyerData) => {
     try {
-      // Use the standardized field names directly
       const transformedData = {
         buyerNTNCNIC: buyerData.buyerNTNCNIC,
         buyerBusinessName: buyerData.buyerBusinessName,
@@ -48,7 +47,6 @@ const Buyers = () => {
       };
 
       if (selectedBuyer) {
-        // Update existing buyer
         const response = await api.put(
           `/tenant/${selectedTenant.tenant_id}/buyers/${selectedBuyer.id}`,
           transformedData
@@ -62,7 +60,6 @@ const Buyers = () => {
           "Buyer updated successfully! The changes have been saved."
         );
       } else {
-        // Create new buyer
         const response = await api.post(
           `/tenant/${selectedTenant.tenant_id}/buyers`,
           transformedData
@@ -72,18 +69,12 @@ const Buyers = () => {
           "Buyer added successfully! The buyer has been added to your system."
         );
       }
-
-      // Only close modal on success
       closeModal();
     } catch (error) {
       console.error("Error saving buyer:", error);
-
-      // Handle specific error cases with human-readable messages
       let errorMessage = "Error saving buyer.";
-
       if (error.response) {
         const { status, data } = error.response;
-
         if (status === 400) {
           if (data.message && data.message.includes("already exists")) {
             errorMessage =
@@ -106,10 +97,7 @@ const Buyers = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-
-      // Show error but don't close modal - let user fix the issue
       toast.error(errorMessage);
-      // Don't close modal on error - let user fix the issue
     }
   };
 
@@ -119,24 +107,17 @@ const Buyers = () => {
         `/tenant/${selectedTenant.tenant_id}/buyers/bulk`,
         { buyers: buyersData }
       );
-
-      // Add the newly created buyers to the current list
       const newBuyers = response.data.data.created;
       setBuyers([...buyers, ...newBuyers]);
-
-      // Show success message with details
       const { summary, errors } = response.data.data;
       if (summary.failed > 0) {
-        // Show detailed error information
         let errorDetails = errors
           .slice(0, 5)
           .map((err) => `Row ${err.row}: ${err.error}`)
           .join("\n");
-
         if (errors.length > 5) {
           errorDetails += `\n... and ${errors.length - 5} more errors`;
         }
-
         toast.warning(
           `Upload completed with issues: ${summary.successful} buyers added, ${summary.failed} failed. Check the details for more information.`,
           {
@@ -145,24 +126,18 @@ const Buyers = () => {
             pauseOnHover: true,
           }
         );
-
-        // Log detailed errors to console for debugging
         console.error("Upload errors:", errors);
       } else {
         toast.success(
           `Successfully uploaded ${summary.successful} buyers! All buyers have been added to your system.`
         );
       }
-
       return response.data;
     } catch (error) {
       console.error("Error in bulk upload:", error);
-
       let errorMessage = "Error uploading buyers.";
-
       if (error.response) {
         const { status, data } = error.response;
-
         if (status === 400) {
           errorMessage =
             data.message ||
@@ -174,7 +149,6 @@ const Buyers = () => {
             data.message || "An error occurred while uploading buyers.";
         }
       }
-
       toast.error(errorMessage);
       throw error;
     }
@@ -209,20 +183,33 @@ const Buyers = () => {
 
   useEffect(() => {
     const fetchBuyers = async () => {
-      // Don't fetch if no tenant is selected
       if (!selectedTenant) {
         setLoading(false);
         return;
       }
 
       try {
-        const response = await api.get(
-          `/tenant/${selectedTenant.tenant_id}/buyers`
-        );
-        setBuyers(response.data.data.buyers);
+        let allBuyers = [];
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Fetch all pages of buyers
+        while (currentPage <= totalPages) {
+          const response = await api.get(
+            `/tenant/${selectedTenant.tenant_id}/buyers?page=${currentPage}`
+          );
+          const { buyers, pagination } = response.data.data;
+          allBuyers = [...allBuyers, ...buyers];
+          totalPages = pagination.total_pages; // Update total pages
+          currentPage += 1; // Move to the next page
+        }
+
+        setBuyers(allBuyers);
+        console.log("BUYERSSSSSSSSSSSS", allBuyers);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching buyers:", error);
+        toast.error("Error fetching buyers.");
         setLoading(false);
       }
     };

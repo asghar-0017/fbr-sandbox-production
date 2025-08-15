@@ -101,8 +101,19 @@ const TenantDashboard = () => {
 
   useEffect(() => {
     if (selectedTenant) {
-      fetchTenantStats();
-      fetchDashboard();
+      // Ensure selectedTenant is stored in localStorage for API interceptor
+      try {
+        localStorage.setItem("selectedTenant", JSON.stringify(selectedTenant));
+        console.log("Stored selectedTenant in localStorage:", selectedTenant);
+      } catch (error) {
+        console.error("Error storing selectedTenant in localStorage:", error);
+      }
+
+      // Small delay to ensure localStorage is properly set
+      setTimeout(() => {
+        fetchTenantStats();
+        fetchDashboard();
+      }, 100);
     }
   }, [selectedTenant]);
 
@@ -132,9 +143,23 @@ const TenantDashboard = () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Ensure selectedTenant exists and has tenant_id
+      if (!selectedTenant || !selectedTenant.tenant_id) {
+        console.error(
+          "No selected tenant or tenant_id available:",
+          selectedTenant
+        );
+        setError("No Company selected. Please select a Company first.");
+        return;
+      }
+
+      console.log("Fetching dashboard for tenant:", selectedTenant.tenant_id);
+
       const res = await api.get(
         `/tenant/${selectedTenant.tenant_id}/dashboard/summary`
       );
+
       if (res.data.success) {
         // Debug: Log dashboard data structure to understand invoice fields
         console.log("Dashboard API Response:", res.data.data);
@@ -145,7 +170,26 @@ const TenantDashboard = () => {
       }
     } catch (err) {
       console.error("Error fetching dashboard:", err);
-      setError("Failed to fetch dashboard");
+
+      // More specific error handling
+      if (err.response?.status === 400) {
+        if (err.response.data?.message === "Tenant ID is required") {
+          setError(
+            "Company ID is missing. Please refresh the page and try again."
+          );
+        } else {
+          setError(
+            err.response.data?.message ||
+              "Bad request. Please check your Company selection."
+          );
+        }
+      } else if (err.response?.status === 401) {
+        setError("Authentication failed. Please log in again.");
+      } else if (err.response?.status === 404) {
+        setError("Dashboard not found for this Company.");
+      } else {
+        setError("Failed to fetch dashboard. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

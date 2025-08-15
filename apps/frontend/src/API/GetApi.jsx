@@ -14,8 +14,30 @@ export const postData = async (endpoint, data, environment = "sandbox") => {
       "Token not available for API call, checking localStorage fallback..."
     );
 
-    // Try fallback from localStorage
-    const fallbackToken = localStorage.getItem("sandboxProductionToken");
+    // Try fallback from localStorage with environment-specific keys
+    const isProduction = () => {
+      return (
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1" &&
+        !window.location.hostname.includes("dev") &&
+        !window.location.hostname.includes("test")
+      );
+    };
+
+    const getStorageKey = (baseKey) => {
+      const env = isProduction() ? "production" : "development";
+      return `${baseKey}_${env}`;
+    };
+
+    // Try environment-specific fallback first
+    const fallbackTokenKey = getStorageKey("sandboxProductionToken");
+    let fallbackToken = localStorage.getItem(fallbackTokenKey);
+
+    // If not found, try legacy key
+    if (!fallbackToken) {
+      fallbackToken = localStorage.getItem("sandboxProductionToken");
+    }
+
     if (fallbackToken) {
       console.log("Found token in localStorage fallback, using it");
       token = fallbackToken;
@@ -105,8 +127,30 @@ export const fetchData = async (endpoint, environment = "sandbox") => {
       "Token not available for API call, checking localStorage fallback..."
     );
 
-    // Try fallback from localStorage
-    const fallbackToken = localStorage.getItem("sandboxProductionToken");
+    // Try fallback from localStorage with environment-specific keys
+    const isProduction = () => {
+      return (
+        window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1" &&
+        !window.location.hostname.includes("dev") &&
+        !window.location.hostname.includes("test")
+      );
+    };
+
+    const getStorageKey = (baseKey) => {
+      const env = isProduction() ? "production" : "development";
+      return `${baseKey}_${env}`;
+    };
+
+    // Try environment-specific fallback first
+    const fallbackTokenKey = getStorageKey("sandboxProductionToken");
+    let fallbackToken = localStorage.getItem(fallbackTokenKey);
+
+    // If not found, try legacy key
+    if (!fallbackToken) {
+      fallbackToken = localStorage.getItem("sandboxProductionToken");
+    }
+
     if (fallbackToken) {
       console.log("Found token in localStorage fallback, using it");
       token = fallbackToken;

@@ -307,10 +307,21 @@ export const postInvoiceDataToFBR = async (invoiceData) => {
 // New function to fetch transaction types from FBR
 export const getTransactionTypes = async () => {
   try {
-    // Get current token dynamically from context
-    const token = API_CONFIG.getCurrentToken("production");
+    // Get current token dynamically from context - try sandbox first, then production
+    let token = API_CONFIG.getCurrentToken("sandbox");
 
     if (!token) {
+      // Fallback to production token if sandbox is not available
+      token = API_CONFIG.getCurrentToken("production");
+    }
+
+    // Also try localStorage fallback
+    if (!token) {
+      token = localStorage.getItem("sandboxProductionToken");
+    }
+
+    if (!token) {
+      // If no token is available, throw an error instead of returning fallback data
       throw new Error(
         "No FBR token found. Please ensure the Company is selected and credentials are loaded."
       );
@@ -328,28 +339,31 @@ export const getTransactionTypes = async () => {
       method: "GET",
       url: "https://gw.fbr.gov.pk/pdi/v1/transtypecode",
       headers: config.headers,
-      timeout: 100000, // 10 second timeout
+      timeout: 10000, // 10 second timeout
     });
 
     console.log("FBR Transaction Types API Response:", response.data);
+
+    // Return the data directly - let the calling component handle the structure
     return response.data;
   } catch (error) {
     console.error("Error fetching transaction types:", error);
 
-    // Handle specific error cases
+    // Handle specific error cases and throw appropriate errors
     if (error.response?.status === 401) {
       throw new Error(
         "Authentication failed. Please check your FBR credentials."
       );
     } else if (error.response?.status === 404) {
-      throw new Error("Transaction types endpoint not found.");
+      throw new Error("Transaction types API endpoint not found.");
     } else if (error.response?.status === 500) {
       throw new Error(
-        "FBR system is temporarily unavailable. Please try again later or contact support."
+        "FBR system is temporarily unavailable. Please try again later."
       );
     } else if (error.response?.data) {
       throw new Error(
-        error.response.data.message || "Error fetching transaction types."
+        error.response.data.message ||
+          "Error fetching transaction types from FBR API."
       );
     } else if (error.code === "ECONNABORTED") {
       throw new Error(
@@ -361,7 +375,8 @@ export const getTransactionTypes = async () => {
       );
     } else {
       throw new Error(
-        "Unable to connect to FBR system. Please try again later."
+        error.message ||
+          "Unable to fetch transaction types from FBR API. Please try again later."
       );
     }
   }

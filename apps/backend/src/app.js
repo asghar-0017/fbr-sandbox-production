@@ -21,7 +21,7 @@ import buyerRoutes from "./routes/buyerRoutes.js";
 import invoiceRoutes, { publicInvoiceRoutes } from "./routes/invoiceRoutes.js";
 import hsCodeRoutes from "./routes/hsCodeRoutes.js";
 
-dotenv.config()
+dotenv.config();
 
 const app = express();
 
@@ -43,7 +43,7 @@ app.use(
     origin: [
       "http://localhost:5174",
       "https://adnan-power.inplsoftwares.online",
-      "http://localhost:3000",
+      "http://localhost:5150",
       "https://fbrtestcase.inplsoftwares.online",
       "*",
     ],

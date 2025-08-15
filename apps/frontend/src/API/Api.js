@@ -46,7 +46,7 @@ const API_CONFIG = {
 
 const api = axios.create({
   // baseURL: "https://fbrtestcase.inplsoftwares.online/api",
-  baseURL: "https://adnan-power.inplsoftwares.online/api",
+  baseURL: "http://localhost:5150/api",
   // You can add headers or other config here if needed
 });
 
@@ -66,15 +66,54 @@ api.interceptors.request.use(
     }
 
     // For admin users, use selected tenant ID if available
+    let tenantIdToUse = null;
+
     if (selectedTenant) {
       try {
         const tenant = JSON.parse(selectedTenant);
-        config.headers["X-Tenant-ID"] = tenant.tenant_id;
+        tenantIdToUse = tenant.tenant_id;
+        console.log(
+          "Using tenant ID from selectedTenant localStorage:",
+          tenantIdToUse
+        );
       } catch (error) {
-        console.error("Error parsing selected Company:", error);
+        console.error(
+          "Error parsing selected Company from localStorage:",
+          error
+        );
       }
     } else if (tenantId) {
-      config.headers["X-Tenant-ID"] = tenantId;
+      tenantIdToUse = tenantId;
+      console.log("Using tenant ID from tenantId localStorage:", tenantIdToUse);
+    }
+
+    // Fallback: Try to extract tenant ID from URL if not found in localStorage
+    if (!tenantIdToUse && config.url.includes("/tenant/")) {
+      const urlMatch = config.url.match(/\/tenant\/([^\/]+)/);
+      if (urlMatch && urlMatch[1]) {
+        tenantIdToUse = urlMatch[1];
+        console.log("Extracted tenant ID from URL as fallback:", tenantIdToUse);
+      }
+    }
+
+    // Set the tenant ID header if we have one
+    if (tenantIdToUse) {
+      config.headers["X-Tenant-ID"] = tenantIdToUse;
+      console.log("Set X-Tenant-ID header:", tenantIdToUse);
+    } else {
+      console.warn("No tenant ID available for request:", config.url);
+    }
+
+    // Debug logging for important requests
+    if (config.url.includes("/dashboard") || config.url.includes("/tenant/")) {
+      console.log("API Request Debug:", {
+        url: config.url,
+        method: config.method,
+        hasAuthHeader: !!config.headers.Authorization,
+        hasTenantHeader: !!config.headers["X-Tenant-ID"],
+        tenantId: config.headers["X-Tenant-ID"],
+        selectedTenant: selectedTenant ? JSON.parse(selectedTenant) : null,
+      });
     }
 
     return config;

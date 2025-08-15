@@ -8,7 +8,20 @@ export const TenantSelectionProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [tokensLoaded, setTokensLoaded] = useState(false);
 
-  // Debug effect to track tokensLoaded changes
+  const isProduction = () => {
+    return (
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1" &&
+      !window.location.hostname.includes("dev") &&
+      !window.location.hostname.includes("test")
+    );
+  };
+
+  const getStorageKey = (baseKey) => {
+    const env = isProduction() ? "production" : "development";
+    return `${baseKey}_${env}`;
+  };
+
   useEffect(() => {
     console.log(
       "TenantSelectionProvider: tokensLoaded changed to:",
@@ -16,172 +29,189 @@ export const TenantSelectionProvider = ({ children }) => {
       "Selected tenant:",
       selectedTenant ? selectedTenant.sellerBusinessName : "None",
       "Token available:",
-      selectedTenant?.sandboxProductionToken ? "Yes" : "No"
+      selectedTenant?.sandboxProductionToken ? "Yes" : "No",
+      "Environment:",
+      isProduction() ? "Production" : "Development"
     );
   }, [tokensLoaded, selectedTenant]);
 
-  useEffect(() => {
-    const loadStoredTenant = async () => {
-      const storedTenant = localStorage.getItem("selectedTenant");
-      console.log(
-        "Loading stored tenant from localStorage:",
-        storedTenant ? "Found" : "Not found"
-      );
+  const loadStoredTenant = async () => {
+    const storageKey = getStorageKey("selectedTenant");
+    const fallbackTokenKey = getStorageKey("sandboxProductionToken");
+    const storedTenant = localStorage.getItem(storageKey);
+    console.log(
+      `Loading stored tenant from ${storageKey}:`,
+      storedTenant ? "Found" : "Not found"
+    );
 
-      if (storedTenant) {
-        try {
-          const tenant = JSON.parse(storedTenant);
-          console.log("Parsed tenant data:", {
-            name: tenant.sellerBusinessName,
-            hasToken: !!tenant.sandboxProductionToken,
-            tokenLength: tenant.sandboxProductionToken?.length || 0,
-          });
+    if (storedTenant) {
+      try {
+        const tenant = JSON.parse(storedTenant);
+        console.log("Parsed tenant data:", {
+          name: tenant.sellerBusinessName,
+          hasToken: !!tenant.sandboxProductionToken,
+          tokenLength: tenant.sandboxProductionToken?.length || 0,
+        });
 
-          setSelectedTenant(tenant);
+        setSelectedTenant(tenant);
 
-          // Check if the tenant has a token
-          if (tenant.sandboxProductionToken) {
-            console.log(
-              "Token found in stored tenant, setting tokensLoaded to true"
-            );
+        if (tenant.sandboxProductionToken) {
+          console.log(
+            "Token found in stored tenant, setting tokensLoaded to true"
+          );
+          setTokensLoaded(true);
+        } else {
+          const fallbackToken = localStorage.getItem(fallbackTokenKey);
+          if (fallbackToken) {
+            console.log("Token found in fallback location, updating tenant");
+            tenant.sandboxProductionToken = fallbackToken;
+            setSelectedTenant({ ...tenant });
             setTokensLoaded(true);
           } else {
-            // Check fallback location
-            const fallbackToken = localStorage.getItem(
-              "sandboxProductionToken"
-            );
-            if (fallbackToken) {
-              console.log(
-                "Token found in fallback location, updating tenant and setting tokensLoaded to true"
-              );
-              tenant.sandboxProductionToken = fallbackToken;
-              setSelectedTenant(tenant);
-              setTokensLoaded(true);
-            } else {
-              console.log(
-                "No token found in stored tenant or fallback, setting tokensLoaded to false"
-              );
-              setTokensLoaded(false);
+            await fetchTenantTokens(tenant);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing stored tenant:", error);
+        localStorage.removeItem(storageKey);
+        setTokensLoaded(false);
+      }
+    } else {
+      const legacyTenant = localStorage.getItem("selectedTenant");
+      const legacyToken = localStorage.getItem("sandboxProductionToken");
 
-              // Try to fetch tokens from server
-              try {
-                const response = await api.get(
-                  `/admin/tenants/${tenant.tenant_id}`
-                );
-
-                if (response.data.success) {
-                  const tenantWithTokens = response.data.data;
-                  setSelectedTenant(tenantWithTokens);
-                  setTokensLoaded(true);
-                } else {
-                  setTokensLoaded(false);
-                  setTimeout(() => {
-                    setTokensLoaded(true);
-                  }, 5000); // 5 seconds fallback
-                }
-              } catch (error) {
-                console.error(
-                  "Error fetching tokens for stored Company:",
-                  error
-                );
-                setTokensLoaded(false);
-                setTimeout(() => {
-                  setTokensLoaded(true);
-                }, 5000); // 5 seconds fallback
-              }
+      if (legacyTenant || legacyToken) {
+        console.log("Migrating legacy storage keys");
+        try {
+          if (legacyTenant) {
+            const tenant = JSON.parse(legacyTenant);
+            if (legacyToken) {
+              tenant.sandboxProductionToken = legacyToken;
             }
+            setSelectedTenant(tenant);
+            setTokensLoaded(!!tenant.sandboxProductionToken);
+
+            const storageKey = getStorageKey("selectedTenant");
+            const fallbackTokenKey = getStorageKey("sandboxProductionToken");
+            localStorage.setItem(storageKey, JSON.stringify(tenant));
+            if (legacyToken) {
+              localStorage.setItem(fallbackTokenKey, legacyToken);
+            }
+
+            localStorage.removeItem("selectedTenant");
+            localStorage.removeItem("sandboxProductionToken");
           }
         } catch (error) {
-          console.error("Error parsing stored Company:", error);
-          localStorage.removeItem("selectedTenant");
+          console.error("Error migrating legacy storage:", error);
           setTokensLoaded(false);
         }
       } else {
         setTokensLoaded(false);
       }
-    };
+    }
+  };
 
+  const fetchTenantTokens = async (tenant) => {
+    if (!tenant?.tenant_id) {
+      console.warn("No tenant ID available for token fetch");
+      setTokensLoaded(false);
+      return false;
+    }
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`Fetching tokens (attempt ${attempt}/3)`);
+        const response = await api.get(`/admin/tenants/${tenant.tenant_id}`);
+        if (
+          response.data.success &&
+          response.data.data.sandboxProductionToken
+        ) {
+          const tenantWithTokens = response.data.data;
+          setSelectedTenant(tenantWithTokens);
+          localStorage.setItem(
+            getStorageKey("selectedTenant"),
+            JSON.stringify(tenantWithTokens)
+          );
+          localStorage.setItem(
+            getStorageKey("sandboxProductionToken"),
+            tenantWithTokens.sandboxProductionToken
+          );
+          setTokensLoaded(true);
+          console.log(
+            "Successfully fetched tokens:",
+            tenantWithTokens.sellerBusinessName
+          );
+          return true;
+        } else {
+          console.log(
+            `Server response indicates failure on attempt ${attempt}`
+          );
+        }
+      } catch (error) {
+        console.error(`Error fetching tokens (attempt ${attempt}/3):`, error);
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    console.error("All attempts to fetch tokens failed");
+    setTokensLoaded(false);
+    return false;
+  };
+
+  useEffect(() => {
     loadStoredTenant();
   }, []);
 
   useEffect(() => {
     if (selectedTenant) {
-      // Store the complete tenant data including the token
-      localStorage.setItem("selectedTenant", JSON.stringify(selectedTenant));
-
-      // Also store the token separately as a fallback
+      const storageKey = getStorageKey("selectedTenant");
+      const fallbackTokenKey = getStorageKey("sandboxProductionToken");
+      localStorage.setItem(storageKey, JSON.stringify(selectedTenant));
       if (selectedTenant.sandboxProductionToken) {
         localStorage.setItem(
-          "sandboxProductionToken",
+          fallbackTokenKey,
           selectedTenant.sandboxProductionToken
         );
       } else {
-        localStorage.removeItem("sandboxProductionToken");
+        localStorage.removeItem(fallbackTokenKey);
       }
     } else {
-      localStorage.removeItem("selectedTenant");
-      localStorage.removeItem("sandboxProductionToken");
+      localStorage.removeItem(getStorageKey("selectedTenant"));
+      localStorage.removeItem(getStorageKey("sandboxProductionToken"));
     }
   }, [selectedTenant]);
 
   const getSandboxToken = () => {
-    // First try to get token from selectedTenant
-    let token = selectedTenant?.sandboxProductionToken || null;
-
-    // Fallback: check if token is stored separately in localStorage
-    if (!token) {
-      const storedToken = localStorage.getItem("sandboxProductionToken");
-      if (storedToken) {
-        console.log("Found token in localStorage fallback");
-        token = storedToken;
-      }
-    }
-
+    const token =
+      selectedTenant?.sandboxProductionToken ||
+      localStorage.getItem(getStorageKey("sandboxProductionToken"));
+    console.log("getSandboxToken:", token ? "Token found" : "No token");
     return token;
   };
 
   const getProductionToken = () => {
-    // Use the same token for both sandbox and production
-    return getSandboxToken();
+    return getSandboxToken(); // Same token for both environments
   };
 
   const getCurrentToken = (environment = "sandbox") => {
     const token = getSandboxToken();
+    console.log(
+      `getCurrentToken (${environment}):`,
+      token ? "Token found" : "No token"
+    );
     return token;
   };
 
   useEffect(() => {
     if (selectedTenant && tokensLoaded) {
-      setTimeout(() => {
-        updateTokenManager({
-          getSandboxToken,
-          getProductionToken,
-          getCurrentToken,
-        });
-      }, 50);
-    } else if (selectedTenant && !tokensLoaded) {
-      // If we have a tenant but tokens are not loaded, try to fetch them
-      const fetchTokensIfNeeded = async () => {
-        if (!selectedTenant.sandboxProductionToken) {
-          console.log(
-            "Attempting to fetch tokens for tenant:",
-            selectedTenant.sellerBusinessName
-          );
-          await retryTokenFetch();
-        }
-      };
-
-      // Add a small delay before retrying to avoid immediate retries
-      setTimeout(fetchTokensIfNeeded, 1000);
-
-      // Update with null token getters when tokens are not loaded
       updateTokenManager({
-        getSandboxToken: () => null,
-        getProductionToken: () => null,
-        getCurrentToken: () => null,
+        getSandboxToken,
+        getProductionToken,
+        getCurrentToken,
       });
     } else {
-      // Update with null token getters when no tenant is selected
       updateTokenManager({
         getSandboxToken: () => null,
         getProductionToken: () => null,
@@ -192,32 +222,24 @@ export const TenantSelectionProvider = ({ children }) => {
 
   const selectTenant = async (tenant) => {
     try {
+      setLoading(true);
       setTokensLoaded(false);
-
       if (!tenant.sandboxProductionToken) {
-        const response = await api.get(`/admin/tenants/${tenant.tenant_id}`);
-        if (response.data.success) {
-          const tenantWithTokens = response.data.data;
-          setSelectedTenant(tenantWithTokens);
-          setTokensLoaded(true);
-        } else {
+        const success = await fetchTenantTokens(tenant);
+        if (!success) {
           setSelectedTenant(tenant);
           setTokensLoaded(false);
-          setTimeout(() => {
-            setTokensLoaded(true);
-          }, 5000); // 5 seconds fallback
         }
       } else {
         setSelectedTenant(tenant);
         setTokensLoaded(true);
       }
     } catch (error) {
-      console.error("Error fetching tenant tokens:", error);
+      console.error("Error selecting tenant:", error);
       setSelectedTenant(tenant);
       setTokensLoaded(false);
-      setTimeout(() => {
-        setTokensLoaded(true);
-      }, 5000); // 5 seconds fallback
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -226,50 +248,27 @@ export const TenantSelectionProvider = ({ children }) => {
       console.warn("No tenant selected, cannot retry token fetch");
       return false;
     }
-
-    try {
-      setTokensLoaded(false);
-      const response = await api.get(
-        `/admin/tenants/${selectedTenant.tenant_id}`
-      );
-      if (response.data.success) {
-        const tenantWithTokens = response.data.data;
-        setSelectedTenant(tenantWithTokens);
-        setTokensLoaded(true);
-        console.log(
-          "Successfully fetched and updated tokens for tenant:",
-          tenantWithTokens.sellerBusinessName
-        );
-        return true;
-      } else {
-        console.log("TenantSelectionProvider: Failed to fetch tokens on retry");
-        setTokensLoaded(false);
-        return false;
-      }
-    } catch (error) {
-      console.error("Error fetching tenant tokens on retry:", error);
-      setTokensLoaded(false);
-      return false;
-    }
+    return await fetchTenantTokens(selectedTenant);
   };
 
-  // Function to validate and refresh token if needed
   const validateAndRefreshToken = async () => {
-    if (!selectedTenant?.sandboxProductionToken) {
-      console.log("No token available, attempting to fetch...");
-      return await retryTokenFetch();
+    if (!selectedTenant) {
+      console.warn("No tenant selected, cannot validate token");
+      return false;
     }
-
-    // For now, we'll assume the token is valid if it exists
-    // In a real implementation, you might want to validate the token with FBR API
-    console.log("Token validation: Token exists, assuming valid");
-    return true;
+    if (selectedTenant.sandboxProductionToken) {
+      console.log("Token exists, assuming valid");
+      setTokensLoaded(true);
+      return true;
+    }
+    return await retryTokenFetch();
   };
 
   const clearSelectedTenant = () => {
     setSelectedTenant(null);
     setTokensLoaded(false);
-    localStorage.removeItem("selectedTenant");
+    localStorage.removeItem(getStorageKey("selectedTenant"));
+    localStorage.removeItem(getStorageKey("sandboxProductionToken"));
   };
 
   const isTenantSelected = () => {

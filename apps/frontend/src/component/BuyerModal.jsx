@@ -20,8 +20,12 @@ import CloseIcon from "@mui/icons-material/Close";
 import { fetchData } from "../API/GetApi";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
 
+// Utility function to wait for a specified time
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
-  const { tokensLoaded } = useTenantSelection();
+  const { tokensLoaded, retryTokenFetch, validateAndRefreshToken } =
+    useTenantSelection();
   const [formData, setFormData] = useState({
     buyerNTNCNIC: "",
     buyerBusinessName: "",
@@ -34,6 +38,8 @@ const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showError, setShowError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [maxRetries] = useState(3);
 
   // Reset form data when modal opens
   useEffect(() => {
@@ -42,6 +48,7 @@ const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
       setErrorMessage("");
       setShowError(false);
       setIsSubmitting(false);
+      setRetryCount(0);
 
       if (buyer) {
         // If editing an existing buyer, populate the form
@@ -65,32 +72,84 @@ const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
     }
   }, [isOpen, buyer]);
 
-  // Manual function to fetch provinces
+  // Enhanced function to fetch provinces with retry mechanism
   const handleFetchProvinces = async () => {
-    if (!tokensLoaded) {
-      setErrorMessage(
-        "Tokens not loaded yet. Please ensure the Company is selected and credentials are loaded."
-      );
-      setShowError(true);
-      return;
-    }
-
     setLoadingProvinces(true);
+    setErrorMessage("");
+    setShowError(false);
+
     try {
+      // First, try to validate and refresh token if needed
+      const tokenValid = await validateAndRefreshToken();
+
+      if (!tokenValid && retryCount < maxRetries) {
+        console.log(
+          `Token validation failed, attempting retry ${retryCount + 1}/${maxRetries}`
+        );
+        setRetryCount((prev) => prev + 1);
+
+        // Wait a bit before retrying (exponential backoff)
+        await wait(1000 * Math.pow(2, retryCount));
+
+        // Try to fetch provinces again
+        await handleFetchProvinces();
+        return;
+      }
+
+      if (!tokenValid) {
+        throw new Error(
+          "Unable to load tokens after multiple attempts. Please refresh the page and try again."
+        );
+      }
+
       const response = await fetchData("pdi/v1/provinces");
       console.log("Provinces fetched:", response);
       setProvinces(response);
       // Store in localStorage for other components to use
       localStorage.setItem("provinceResponse", JSON.stringify(response));
+      setRetryCount(0); // Reset retry count on success
     } catch (error) {
       console.error("Error fetching provinces:", error);
-      setErrorMessage("Failed to fetch provinces. Please try again.");
+
+      // If it's a token-related error and we haven't exceeded retries, try again
+      if (
+        (error.message.includes("token") || error.message.includes("Token")) &&
+        retryCount < maxRetries
+      ) {
+        console.log(
+          `Token error detected, attempting retry ${retryCount + 1}/${maxRetries}`
+        );
+        setRetryCount((prev) => prev + 1);
+
+        // Wait before retrying (exponential backoff)
+        await wait(1000 * Math.pow(2, retryCount));
+
+        // Try to fetch provinces again
+        await handleFetchProvinces();
+        return;
+      }
+
+      setErrorMessage(
+        error.message || "Failed to fetch provinces. Please try again."
+      );
       setShowError(true);
       setProvinces([]);
     } finally {
       setLoadingProvinces(false);
     }
   };
+
+  // Auto-fetch provinces when modal opens and tokens are loaded
+  useEffect(() => {
+    if (isOpen && tokensLoaded && provinces.length === 0) {
+      // Small delay to ensure everything is properly initialized
+      const timer = setTimeout(() => {
+        handleFetchProvinces();
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, tokensLoaded]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -417,7 +476,7 @@ const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
                     {provinces.length === 0 ? (
                       <MenuItem disabled>
                         {loadingProvinces
-                          ? "Loading provinces..."
+                          ? `Loading provinces...${retryCount > 0 ? ` (Retry ${retryCount}/${maxRetries})` : ""}`
                           : "No provinces available"}
                       </MenuItem>
                     ) : (
@@ -473,7 +532,9 @@ const BuyerModal = ({ isOpen, onClose, onSave, buyer }) => {
                         size={14}
                         sx={{ mr: 0.5, color: "#007AFF" }}
                       />
-                      Getting Provinces...
+                      {retryCount > 0
+                        ? `Retrying... (${retryCount}/${maxRetries})`
+                        : "Getting Provinces..."}
                     </>
                   ) : (
                     "Get Provinces"

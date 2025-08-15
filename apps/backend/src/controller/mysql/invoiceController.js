@@ -5,6 +5,7 @@ import ejs from "ejs";
 import puppeteer from "puppeteer";
 import numberToWords from "number-to-words";
 import TenantDatabaseService from "../../service/TenantDatabaseService.js";
+import Tenant from "../../model/mysql/Tenant.js";
 const { toWords } = numberToWords;
 
 // Helper function to generate system invoice ID
@@ -2136,5 +2137,86 @@ export const getDashboardSummary = async (req, res) => {
       message: "Error retrieving dashboard summary",
       error: error.message,
     });
+  }
+};
+
+// Get document types from FBR
+export const getDocumentTypes = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { environment = "sandbox" } = req.query;
+
+    // Get token from request headers
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token required",
+      });
+    }
+
+    console.log(`Fetching document types for tenant: ${tenantId}, environment: ${environment}`);
+
+    // Get tenant data to check FBR credentials
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "Tenant not found",
+      });
+    }
+
+    // Check if tenant has FBR credentials
+    if (!tenant.sandboxProductionToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FBR credentials not found for this tenant",
+      });
+    }
+
+    // Call FBR service to get document types
+    const documentTypes = await getDocumentTypesFromFBR(environment, token);
+
+    res.json({
+      success: true,
+      message: "Document types fetched successfully",
+      data: documentTypes,
+    });
+  } catch (error) {
+    console.error("Error fetching document types:", error);
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: "FBR authentication failed. Please check your credentials.",
+      });
+    } else if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: "Document types API endpoint not found.",
+      });
+    } else if (error.response?.status === 500) {
+      return res.status(503).json({
+        success: false,
+        message: "FBR system is temporarily unavailable. Please try again later.",
+      });
+    } else if (error.code === "ECONNABORTED") {
+      return res.status(408).json({
+        success: false,
+        message: "Request timeout. FBR system may be slow. Please try again.",
+      });
+    } else if (error.code === "ERR_NETWORK") {
+      return res.status(503).json({
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Unable to fetch document types from FBR API.",
+      });
+    }
   }
 };

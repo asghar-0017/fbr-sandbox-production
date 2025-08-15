@@ -37,7 +37,20 @@ app.use(express.static("public"));
 app.use(express.static(path.join(__dirname, "dist")));
 
 app.use(express.json());
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", "https://gw.fbr.gov.pk", "https://adnan-power.inplsoftwares.online"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        fontSrc: ["'self'", "https:"],
+      },
+    },
+  })
+);
 app.use(
   cors({
     origin: [

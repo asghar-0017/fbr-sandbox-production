@@ -36,6 +36,14 @@ router.put("/invoices/:id", invoiceController.updateInvoice);
 router.delete("/invoices/:id", invoiceController.deleteInvoice);
 router.post("/invoices/:id/submit", invoiceController.submitSavedInvoice);
 
+// Get document types from FBR
+router.get(
+  "/tenant/:tenantId/document-types",
+  authenticateToken,
+  identifyTenant,
+  invoiceController.getDocumentTypes
+);
+
 export default router;
 
 // 👇 Export the public route separately

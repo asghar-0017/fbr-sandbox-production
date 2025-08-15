@@ -83,3 +83,36 @@ export const fetchData = async (
     throw error;
   }
 };
+
+// New function to fetch document types from FBR
+export const getDocumentTypes = async (environment = "sandbox", token = null) => {
+  if (!token) {
+    throw new Error(`No ${environment} token provided for FBR API calls`);
+  }
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  try {
+    const response = await axios.get(`${FBR_BASE_URL}/pdi/v1/doctypecode`, config);
+
+    console.log("FBR Document Types API Response:", {
+      endpoint: "pdi/v1/doctypecode",
+      status: response.status,
+      data: response.data,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("FBR Document Types API Error:", {
+      endpoint: "pdi/v1/doctypecode",
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
+};

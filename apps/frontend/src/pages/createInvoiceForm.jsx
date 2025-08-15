@@ -734,8 +734,9 @@ export default function CreateInvoice() {
               return;
             }
 
+            // Use backend API instead of calling FBR directly to avoid CSP issues
             const response = await fetch(
-              "https://gw.fbr.gov.pk/pdi/v1/doctypecode",
+              `/api/tenant/${selectedTenant.tenant_id}/document-types`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
@@ -818,8 +819,9 @@ export default function CreateInvoice() {
                   return;
                 }
 
+                // Use backend API instead of calling FBR directly to avoid CSP issues
                 const response = await fetch(
-                  "https://gw.fbr.gov.pk/pdi/v1/doctypecode",
+                  `/api/tenant/${selectedTenant.tenant_id}/document-types`,
                   {
                     headers: { Authorization: `Bearer ${token}` },
                   }

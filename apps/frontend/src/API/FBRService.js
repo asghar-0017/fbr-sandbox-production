@@ -381,3 +381,80 @@ export const getTransactionTypes = async () => {
     }
   }
 };
+
+// New function to fetch document types from backend instead of FBR directly
+export const getDocumentTypesFromBackend = async (tenantId) => {
+  try {
+    // Get current token dynamically from context
+    let token = API_CONFIG.getCurrentToken("sandbox");
+
+    if (!token) {
+      // Fallback to production token if sandbox is not available
+      token = API_CONFIG.getCurrentToken("production");
+    }
+
+    // Also try localStorage fallback
+    if (!token) {
+      token = localStorage.getItem("sandboxProductionToken");
+    }
+
+    if (!token) {
+      throw new Error(
+        "No FBR token found. Please ensure the Company is selected and credentials are loaded."
+      );
+    }
+
+    const config = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    };
+
+    // Call our backend API instead of FBR directly
+    const response = await axios({
+      method: "GET",
+      url: `/api/tenant/${tenantId}/document-types`,
+      headers: config.headers,
+      timeout: 10000, // 10 second timeout
+    });
+
+    console.log("Backend Document Types API Response:", response.data);
+
+    // Return the data directly - let the calling component handle the structure
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching document types from backend:", error);
+
+    // Handle specific error cases and throw appropriate errors
+    if (error.response?.status === 401) {
+      throw new Error(
+        "Authentication failed. Please check your credentials."
+      );
+    } else if (error.response?.status === 404) {
+      throw new Error("Document types API endpoint not found.");
+    } else if (error.response?.status === 500) {
+      throw new Error(
+        "System is temporarily unavailable. Please try again later."
+      );
+    } else if (error.response?.data) {
+      throw new Error(
+        error.response.data.message ||
+          "Error fetching document types from backend API."
+      );
+    } else if (error.code === "ECONNABORTED") {
+      throw new Error(
+        "Request timeout. System may be slow. Please try again."
+      );
+    } else if (error.code === "ERR_NETWORK") {
+      throw new Error(
+        "Network error. Please check your internet connection and try again."
+      );
+    } else {
+      throw new Error(
+        error.message ||
+          "Unable to fetch document types from backend API. Please try again later."
+      );
+    }
+  }
+};

@@ -41,7 +41,31 @@ router.get(
   "/tenant/:tenantId/document-types",
   authenticateToken,
   identifyTenant,
-  invoiceController.getDocumentTypes
+  invoiceController.getDocumentTypesController
+);
+
+// Get provinces from FBR
+router.get(
+  "/tenant/:tenantId/provinces",
+  authenticateToken,
+  identifyTenant,
+  invoiceController.getProvincesController
+);
+
+// Validate invoice data with FBR
+router.post(
+  "/tenant/:tenantId/validate-invoice",
+  authenticateToken,
+  identifyTenant,
+  invoiceController.validateInvoiceDataController
+);
+
+// Submit invoice data to FBR
+router.post(
+  "/tenant/:tenantId/submit-invoice",
+  authenticateToken,
+  identifyTenant,
+  invoiceController.submitInvoiceDataController
 );
 
 export default router;

@@ -17,6 +17,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import Button from "@mui/material/Button";
 import dayjs from "dayjs";
 import { fetchData, postData } from "../API/GetApi";
+import { api } from "../API/Api";
 import RateSelector from "../component/RateSelector";
 import SROScheduleNumber from "../component/SROScheduleNumber";
 import SROItem from "../component/SROItem";
@@ -142,16 +143,32 @@ export default function ProductionFoam() {
   }, [selectedTenant]);
 
   useEffect(() => {
-    fetch(`${apiKeyLocal}/get-buyers`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setBuyers(data.users || []))
-      .catch(() => setBuyers([]));
-  }, []);
+    const fetchBuyers = async () => {
+      try {
+        if (!selectedTenant) {
+          console.error("No Company selected");
+          setBuyers([]);
+          return;
+        }
+
+        const response = await api.get(
+          `/tenant/${selectedTenant.tenant_id}/buyers/all`
+        );
+
+        if (response.data.success) {
+          setBuyers(response.data.data.buyers || []);
+        } else {
+          console.error("Failed to fetch buyers:", response.data.message);
+          setBuyers([]);
+        }
+      } catch (error) {
+        console.error("Error fetching buyers:", error);
+        setBuyers([]);
+      }
+    };
+
+    fetchBuyers();
+  }, [selectedTenant]);
 
   useEffect(() => {
     if (!selectedBuyerId) return;

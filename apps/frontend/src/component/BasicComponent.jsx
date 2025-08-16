@@ -439,7 +439,7 @@ export default function BasicTable() {
             >
               <TableHead>
                 <TableRow sx={{ background: "#EDEDED" }}>
-                  {[...Array(10)].map((_, index) => (
+                  {[...Array(9)].map((_, index) => (
                     <TableCell key={index}>
                       <Skeleton variant="text" width={80} height={20} />
                     </TableCell>
@@ -449,11 +449,11 @@ export default function BasicTable() {
               <TableBody>
                 {[...Array(5)].map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    {[...Array(10)].map((_, colIndex) => (
+                    {[...Array(9)].map((_, colIndex) => (
                       <TableCell key={`${rowIndex}-${colIndex}`}>
                         <Skeleton
                           variant="text"
-                          width={colIndex === 9 ? 120 : 100}
+                          width={colIndex === 8 ? 120 : 100}
                           height={16}
                         />
                       </TableCell>
@@ -654,7 +654,6 @@ export default function BasicTable() {
                         "Invoice Type",
                         "Buyer",
                         "Buyer NTN",
-                        "Transaction ID",
                         "Product Description",
                         "Actions",
                       ].map((heading) => (
@@ -807,9 +806,6 @@ export default function BasicTable() {
                           <Box sx={{ fontWeight: 500 }}>
                             {row.buyerNTNCNIC || "N/A"}
                           </Box>
-                        </TableCell>
-                        <TableCell align="center">
-                          {row.transctypeId || "N/A"}
                         </TableCell>
                         <TableCell align="center">
                           {row.items && row.items.length > 0

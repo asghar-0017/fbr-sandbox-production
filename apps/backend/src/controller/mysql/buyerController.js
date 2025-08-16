@@ -127,6 +127,49 @@ export const getAllBuyers = async (req, res) => {
   }
 };
 
+// Get all buyers without pagination (for dropdowns)
+export const getAllBuyersWithoutPagination = async (req, res) => {
+  try {
+    const { Buyer } = req.tenantModels;
+    const { search } = req.query;
+
+    const whereClause = {};
+
+    // Add search functionality
+    if (search) {
+      whereClause[req.tenantDb.Sequelize.Op.or] = [
+        { buyerNTNCNIC: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } },
+        {
+          buyerBusinessName: {
+            [req.tenantDb.Sequelize.Op.like]: `%${search}%`,
+          },
+        },
+        { buyerProvince: { [req.tenantDb.Sequelize.Op.like]: `%${search}%` } },
+      ];
+    }
+
+    const buyers = await Buyer.findAll({
+      where: whereClause,
+      order: [["buyerBusinessName", "ASC"]],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        buyers: buyers,
+        total_records: buyers.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting all buyers:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving buyers",
+      error: error.message,
+    });
+  }
+};
+
 // Get buyer by ID
 export const getBuyerById = async (req, res) => {
   try {

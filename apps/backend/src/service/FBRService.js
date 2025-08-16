@@ -116,3 +116,112 @@ export const getDocumentTypes = async (environment = "sandbox", token = null) =>
     throw error;
   }
 };
+
+// New function to fetch provinces from FBR
+export const getProvinces = async (environment = "sandbox", token = null) => {
+  if (!token) {
+    throw new Error(`No ${environment} token provided for FBR API calls`);
+  }
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  try {
+    const response = await axios.get(`${FBR_BASE_URL}/pdi/v1/provinces`, config);
+
+    console.log("FBR Provinces API Response:", {
+      endpoint: "pdi/v1/provinces",
+      status: response.status,
+      data: response.data,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("FBR Provinces API Error:", {
+      endpoint: "pdi/v1/provinces",
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
+};
+
+// New function to validate invoice data with FBR
+export const validateInvoiceData = async (invoiceData, environment = "sandbox", token = null) => {
+  if (!token) {
+    throw new Error(`No ${environment} token provided for FBR API calls`);
+  }
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  try {
+    const response = await axios.post(
+      `${FBR_BASE_URL}/pdi/v1/di_data/v1/di/validateinvoicedata`,
+      invoiceData,
+      config
+    );
+
+    console.log("FBR Invoice Validation API Response:", {
+      endpoint: "pdi/v1/di_data/v1/di/validateinvoicedata",
+      status: response.status,
+      data: response.data,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("FBR Invoice Validation API Error:", {
+      endpoint: "pdi/v1/di_data/v1/di/validateinvoicedata",
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
+};
+
+// New function to submit invoice data to FBR
+export const submitInvoiceData = async (invoiceData, environment = "sandbox", token = null) => {
+  if (!token) {
+    throw new Error(`No ${environment} token provided for FBR API calls`);
+  }
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  try {
+    const response = await axios.post(
+      `${FBR_BASE_URL}/pdi/v1/di_data/v1/di/postinvoicedata`,
+      invoiceData,
+      config
+    );
+
+    console.log("FBR Invoice Submission API Response:", {
+      endpoint: "pdi/v1/di_data/v1/di/postinvoicedata",
+      status: response.status,
+      data: response.data,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("FBR Invoice Submission API Error:", {
+      endpoint: "pdi/v1/di_data/v1/di/postinvoicedata",
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw error;
+  }
+};

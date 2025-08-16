@@ -41,6 +41,40 @@ const generateSystemInvoiceId = async (Invoice) => {
   }
 };
 
+// Helper function to generate short 6-digit IDs for draft and saved invoices
+const generateShortInvoiceId = async (Invoice, prefix) => {
+  try {
+    // Get the highest existing invoice ID with this prefix for this tenant
+    const lastInvoice = await Invoice.findOne({
+      where: {
+        invoice_number: {
+          [Invoice.sequelize.Sequelize.Op.like]: `${prefix}_%`,
+        },
+      },
+      order: [["invoice_number", "DESC"]],
+      attributes: ["invoice_number"],
+    });
+
+    let nextNumber = 1;
+
+    if (lastInvoice && lastInvoice.invoice_number) {
+      // Extract the number from the last invoice ID (e.g., "DRAFT_123456" -> 123456)
+      const match = lastInvoice.invoice_number.match(new RegExp(`${prefix}_(\\d+)`));
+      if (match) {
+        nextNumber = parseInt(match[1]) + 1;
+      }
+    }
+
+    // Format as DRAFT_000001, DRAFT_000002, etc. or SAVED_000001, SAVED_000002, etc.
+    return `${prefix}_${nextNumber.toString().padStart(6, "0")}`;
+  } catch (error) {
+    console.error(`Error generating short ${prefix} invoice ID:`, error);
+    // Fallback to random 6-digit number if there's an error
+    const randomNum = Math.floor(Math.random() * 900000) + 100000; // 100000 to 999999
+    return `${prefix}_${randomNum}`;
+  }
+};
+
 export const createInvoice = async (req, res) => {
   try {
     const { Invoice, InvoiceItem } = req.tenantModels;
@@ -258,9 +292,17 @@ export const saveInvoice = async (req, res) => {
           throw new Error("Only draft invoices can be updated");
         }
 
+        // Check if the current invoice number already has DRAFT_ prefix
+        let updatedInvoiceNumber = invoice.invoice_number;
+        if (!updatedInvoiceNumber || !updatedInvoiceNumber.startsWith("DRAFT_")) {
+          // Generate a new DRAFT_ invoice number if it doesn't have the right prefix
+          updatedInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
+        }
+
         // Update invoice header
         await invoice.update(
           {
+            invoice_number: updatedInvoiceNumber,
             invoiceType,
             invoiceDate,
             sellerNTNCNIC,
@@ -288,8 +330,7 @@ export const saveInvoice = async (req, res) => {
         });
       } else {
         // Generate a temporary invoice number for draft
-        // Generate a temporary invoice number for draft
-        const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const tempInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
         // Generate system invoice ID
         const systemInvoiceId = await generateSystemInvoiceId(Invoice);
 
@@ -426,7 +467,7 @@ export const saveAndValidateInvoice = async (req, res) => {
     } = req.body;
 
     // Generate a temporary invoice number for saved invoice
-    const tempInvoiceNumber = `SAVED_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const tempInvoiceNumber = await generateShortInvoiceId(Invoice, "SAVED");
 
     // Validate the data first (basic validation)
     const validationErrors = [];
@@ -488,6 +529,7 @@ export const saveAndValidateInvoice = async (req, res) => {
         }
         await invoice.update(
           {
+            invoice_number: tempInvoiceNumber,
             invoiceType,
             invoiceDate,
             sellerNTNCNIC,
@@ -1765,7 +1807,7 @@ export const bulkCreateInvoices = async (req, res) => {
         }
 
         // Generate a temporary invoice number for draft (will be replaced when posted to FBR)
-        const tempInvoiceNumber = `DRAFT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const tempInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
 
         // Normalize provinces to title case
         const normalizeProvince = (province) => {
@@ -2141,7 +2183,7 @@ export const getDashboardSummary = async (req, res) => {
 };
 
 // Get document types from FBR
-export const getDocumentTypes = async (req, res) => {
+export const getDocumentTypesController = async (req, res) => {
   try {
     const { tenantId } = req.params;
     const { environment = "sandbox" } = req.query;
@@ -2176,7 +2218,7 @@ export const getDocumentTypes = async (req, res) => {
     }
 
     // Call FBR service to get document types
-    const documentTypes = await getDocumentTypesFromFBR(environment, token);
+    const documentTypes = await getDocumentTypes(environment, token);
 
     res.json({
       success: true,
@@ -2216,6 +2258,253 @@ export const getDocumentTypes = async (req, res) => {
       return res.status(500).json({
         success: false,
         message: error.message || "Unable to fetch document types from FBR API.",
+      });
+    }
+  }
+};
+
+// Get provinces from FBR
+export const getProvincesController = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { environment = "sandbox" } = req.query;
+
+    // Get token from request headers
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token required",
+      });
+    }
+
+    console.log(`Fetching provinces for tenant: ${tenantId}, environment: ${environment}`);
+
+    // Get tenant data to check FBR credentials
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "Tenant not found",
+      });
+    }
+
+    // Check if tenant has FBR credentials
+    if (!tenant.sandboxProductionToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FBR credentials not found for this tenant",
+      });
+    }
+
+    // Call FBR service to get provinces
+    const provinces = await getProvinces(environment, token);
+
+    res.json({
+      success: true,
+      message: "Provinces fetched successfully",
+      data: provinces,
+    });
+  } catch (error) {
+    console.error("Error fetching provinces:", error);
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: "FBR authentication failed. Please check your credentials.",
+      });
+    } else if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: "Provinces API endpoint not found.",
+      });
+    } else if (error.response?.status === 500) {
+      return res.status(503).json({
+        success: false,
+        message: "FBR system is temporarily unavailable. Please try again later.",
+      });
+    } else if (error.code === "ECONNABORTED") {
+      return res.status(408).json({
+        success: false,
+        message: "Request timeout. FBR system may be slow. Please try again.",
+      });
+    } else if (error.code === "ERR_NETWORK") {
+      return res.status(503).json({
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Unable to fetch provinces from FBR API.",
+      });
+    }
+  }
+};
+
+// Validate invoice data with FBR
+export const validateInvoiceDataController = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { environment = "sandbox" } = req.query;
+    const invoiceData = req.body;
+
+    // Get token from request headers
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token required",
+      });
+    }
+
+    console.log(`Validating invoice data for tenant: ${tenantId}, environment: ${environment}`);
+
+    // Get tenant data to check FBR credentials
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "Tenant not found",
+      });
+    }
+
+    // Check if tenant has FBR credentials
+    if (!tenant.sandboxProductionToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FBR credentials not found for this tenant",
+      });
+    }
+
+    // Call FBR service to validate invoice data
+    const validationResult = await validateInvoiceData(invoiceData, environment, token);
+
+    res.json({
+      success: true,
+      message: "Invoice data validated successfully",
+      data: validationResult,
+    });
+  } catch (error) {
+    console.error("Error validating invoice data:", error);
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: "FBR authentication failed. Please check your credentials.",
+      });
+    } else if (error.response?.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invoice data provided.",
+        data: error.response?.data,
+      });
+    } else if (error.response?.status === 500) {
+      return res.status(503).json({
+        success: false,
+        message: "FBR system is temporarily unavailable. Please try again later.",
+      });
+    } else if (error.code === "ECONNABORTED") {
+      return res.status(408).json({
+        success: false,
+        message: "Request timeout. FBR system may be slow. Please try again.",
+      });
+    } else if (error.code === "ERR_NETWORK") {
+      return res.status(503).json({
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Unable to validate invoice data with FBR API.",
+      });
+    }
+  }
+};
+
+// Submit invoice data to FBR
+export const submitInvoiceDataController = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    const { environment = "sandbox" } = req.query;
+    const invoiceData = req.body;
+
+    // Get token from request headers
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization token required",
+      });
+    }
+
+    console.log(`Submitting invoice data for tenant: ${tenantId}, environment: ${environment}`);
+
+    // Get tenant data to check FBR credentials
+    const tenant = await Tenant.findByPk(tenantId);
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "Tenant not found",
+      });
+    }
+
+    // Check if tenant has FBR credentials
+    if (!tenant.sandboxProductionToken) {
+      return res.status(400).json({
+        success: false,
+        message: "FBR credentials not found for this tenant",
+      });
+    }
+
+    // Call FBR service to submit invoice data
+    const submissionResult = await submitInvoiceData(invoiceData, environment, token);
+
+    res.json({
+      success: true,
+      message: "Invoice data submitted successfully",
+      data: submissionResult,
+    });
+  } catch (error) {
+    console.error("Error submitting invoice data:", error);
+
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: "FBR authentication failed. Please check your credentials.",
+      });
+    } else if (error.response?.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid invoice data provided.",
+        data: error.response?.data,
+      });
+    } else if (error.response?.status === 500) {
+      return res.status(503).json({
+        success: false,
+        message: "FBR system is temporarily unavailable. Please try again later.",
+      });
+    } else if (error.code === "ECONNABORTED") {
+      return res.status(408).json({
+        success: false,
+        message: "Request timeout. FBR system may be slow. Please try again.",
+      });
+    } else if (error.code === "ERR_NETWORK") {
+      return res.status(503).json({
+        success: false,
+        message: "Network error. Please check your connection and try again.",
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        message: error.message || "Unable to submit invoice data to FBR API.",
       });
     }
   }

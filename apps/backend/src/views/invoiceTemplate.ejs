@@ -110,6 +110,17 @@
 </head>
 
 <body>
+  <%
+    // Helper function to format numbers with commas
+    function formatNumber(num) {
+      if (num === null || num === undefined || isNaN(num)) return '0.00';
+      return parseFloat(num).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+  %>
+  
   <div class="header">
     <h2>Sales Tax Invoice</h2>
   </div>
@@ -197,35 +208,35 @@
             <%= item.quantity %>
           </td>
           <td>
-            <%= item.unitPrice %>
+            <%= formatNumber(item.unitPrice) %>
           </td>
           <td>
-            <%= (parseFloat(item.valueSalesExcludingST) || 0).toFixed(2) %>
+            <%= formatNumber(item.valueSalesExcludingST) %>
           </td>
           <td>
             <%= item.rate %>
           </td>
           <td>
-            <%= (parseFloat(item.salesTaxApplicable) || 0).toFixed(2) %>
+            <%= formatNumber(item.salesTaxApplicable) %>
           </td>
           <td>
-            <%= (parseFloat(item.extraTax) || 0).toFixed(2) %>
+            <%= formatNumber(item.extraTax) %>
           </td>
           <td>
-            <%= (parseFloat(item.furtherTax) || 0).toFixed(2) %>
+            <%= formatNumber(item.furtherTax) %>
           </td>
           <td>
-            <%= (parseFloat(item.fedPayable) || 0).toFixed(2) %>
+            <%= formatNumber(item.fedPayable) %>
           </td>
           <td>
-            <%= (parseFloat(item.discount) || 0).toFixed(2) %>
+            <%= formatNumber(item.discount) %>
           </td>
           <td>
-            <%= (parseFloat(item.salesTaxWithheldAtSource) || 0).toFixed(2) %>
+            <%= formatNumber(item.salesTaxWithheldAtSource) %>
           </td>
           <td>
-            <%= (parseFloat(item.totalValues) || 0).toFixed(2) %>
-          </td> <!-- Just use totalValues -->
+            <%= formatNumber(item.totalValues) %>
+          </td>
 
         </tr>
         <% }); %>
@@ -243,21 +254,21 @@
     %>
 
     <div class="summary-box">
-      <p>Sub Total (Excl. Tax): <%= subTotal.toFixed(2) %>
+      <p>Sub Total (Excl. Tax): <%= formatNumber(subTotal) %>
       </p>
-      <p>Sales Tax (GST): <%= gst.toFixed(2) %>
+      <p>Sales Tax (GST): <%= formatNumber(gst) %>
       </p>
-      <p>Further Tax: <%= further.toFixed(2) %>
+      <p>Further Tax: <%= formatNumber(further) %>
       </p>
-      <p>Extra Tax: <%= extra.toFixed(2) %>
+      <p>Extra Tax: <%= formatNumber(extra) %>
       </p>
-      <p>fedPayable: <%= fed.toFixed(2) %>
+      <p>fedPayable: <%= formatNumber(fed) %>
       </p>
-      <p>Discount: <%= dis.toFixed(2) %>
+      <p>Discount: <%= formatNumber(dis) %>
       </p>
-      <p>Sales Tax Withheld: <%= withheld.toFixed(2) %>
+      <p>Sales Tax Withheld: <%= formatNumber(withheld) %>
       </p>
-      <p><strong>Grand Total (Incl. All Taxes): RS. <%= grandTotal.toFixed(2) %></strong></p>
+      <p><strong>Grand Total (Incl. All Taxes): RS. <%= formatNumber(grandTotal) %></strong></p>
     </div>
 
    <div class="total-in-words" style="position: relative; bottom: 140px;">

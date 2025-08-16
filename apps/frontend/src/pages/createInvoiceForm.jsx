@@ -715,9 +715,21 @@ export default function CreateInvoice() {
       setAllLoading(true);
 
       Promise.allSettled([
-        fetchData("pdi/v1/provinces").then((response) => {
-          setProvince(response);
-          localStorage.setItem("provinceResponse", JSON.stringify(response));
+        // Use backend API instead of calling FBR directly to avoid CSP issues
+        fetch(`/api/tenant/${selectedTenant.tenant_id}/provinces`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((response) => response.json()).then((data) => {
+          if (data.success) {
+            setProvince(data.data);
+            localStorage.setItem("provinceResponse", JSON.stringify(data.data));
+          } else {
+            console.error("Failed to fetch provinces:", data.message);
+            // Fallback to empty array
+            setProvince([]);
+          }
+        }).catch((error) => {
+          console.error("Error fetching provinces:", error);
+          setProvince([]);
         }),
         // HS codes will be loaded by OptimizedHSCodeSelector component with caching
         Promise.resolve([]),
@@ -797,12 +809,21 @@ export default function CreateInvoice() {
           setAllLoading(true);
 
           Promise.allSettled([
-            fetchData("pdi/v1/provinces").then((response) => {
-              setProvince(response);
-              localStorage.setItem(
-                "provinceResponse",
-                JSON.stringify(response)
-              );
+            // Use backend API instead of calling FBR directly to avoid CSP issues
+            fetch(`/api/tenant/${selectedTenant.tenant_id}/provinces`, {
+              headers: { Authorization: `Bearer ${token}` },
+            }).then((response) => response.json()).then((data) => {
+              if (data.success) {
+                setProvince(data.data);
+                localStorage.setItem("provinceResponse", JSON.stringify(data.data));
+              } else {
+                console.error("Failed to fetch provinces:", data.message);
+                // Fallback to empty array
+                setProvince(response);
+              }
+            }).catch((error) => {
+              console.error("Error fetching provinces:", error);
+              setProvince([]);
             }),
             // HS codes will be loaded by OptimizedHSCodeSelector component with caching
             Promise.resolve([]),
@@ -901,7 +922,7 @@ export default function CreateInvoice() {
         }
 
         const response = await api.get(
-          `/tenant/${selectedTenant.tenant_id}/buyers`
+          `/tenant/${selectedTenant.tenant_id}/buyers/all`
         );
 
         if (response.data.success) {
@@ -1581,31 +1602,13 @@ export default function CreateInvoice() {
       // Use addedItems for saving if available, otherwise use formData.items
       const itemsToSave = addedItems.length > 0 ? addedItems : formData.items;
 
-      // Validate all items before proceeding (for draft save, we can be more lenient)
-      const validationErrors = [];
-      itemsToSave.forEach((item, index) => {
-        const itemErrors = validateItem(item, index + 1);
-        if (itemErrors.length > 0) {
-          validationErrors.push({
-            itemNumber: index + 1,
-            errors: itemErrors,
-          });
-        }
-      });
-
-      // If there are validation errors, show them and stop
-      if (validationErrors.length > 0) {
-        const errorMessages = validationErrors
-          .map(
-            (error) =>
-              `Item ${error.itemNumber} validation failed: ${error.errors.join(", ")}`
-          )
-          .join("\n");
-
+      // For draft save, no validation required - just save whatever data is present
+      // Only check if there's at least some data to save
+      if (itemsToSave.length === 0) {
         Swal.fire({
-          icon: "error",
-          title: "Item Validation Failed",
-          text: errorMessages,
+          icon: "warning",
+          title: "No Items",
+          text: "Please add at least one item before saving a draft.",
           confirmButtonColor: "#d33",
         });
         setSaveLoading(false);
@@ -4079,14 +4082,15 @@ export default function CreateInvoice() {
                   color="info"
                   size="small"
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1.5,
                     fontWeight: 600,
-                    px: 2,
-                    py: 0.5,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
+                    px: 1.5,
+                    py: 0.3,
+                    fontSize: 11,
+                    letterSpacing: 0.3,
                     boxShadow: 1,
                     transition: "all 0.2s",
+                    minWidth: "auto",
                     "&:hover": {
                       background: "#0288d1",
                       color: "white",
@@ -4107,14 +4111,15 @@ export default function CreateInvoice() {
                   color="warning"
                   size="small"
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1.5,
                     fontWeight: 600,
-                    px: 2,
-                    py: 0.5,
-                    fontSize: 12,
-                    letterSpacing: 0.5,
+                    px: 1.5,
+                    py: 0.3,
+                    fontSize: 11,
+                    letterSpacing: 0.3,
                     boxShadow: 1,
                     transition: "all 0.2s",
+                    minWidth: "auto",
                     "&:hover": {
                       background: "#f57c00",
                       color: "white",
@@ -4138,14 +4143,15 @@ export default function CreateInvoice() {
                 size="small"
                 sx={{
                   background: "#2E7D32",
-                  borderRadius: 2,
+                  borderRadius: 1.5,
                   fontWeight: 600,
-                  px: 2,
-                  py: 0.5,
-                  fontSize: 12,
-                  letterSpacing: 0.5,
+                  px: 1.5,
+                  py: 0.3,
+                  fontSize: 11,
+                  letterSpacing: 0.3,
                   boxShadow: 1,
                   transition: "background 0.2s",
+                  minWidth: "auto",
                   "&:hover": { background: "#256e2b" },
                 }}
                 disabled={loading}

@@ -42,7 +42,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", "https://gw.fbr.gov.pk", "https://united-tubes.inplsoftwares.online"],
+        connectSrc: ["'self'", "https://gw.fbr.gov.pk", "https://adnan-textile.inplsoftwares.online"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
@@ -55,8 +55,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
-      "https://united-tubes.inplsoftwares.online",
-      "https://united-tubes.inplsoftwares.online",
+      "https://adnan-textile.inplsoftwares.online",
+      "https://adnan-textile.inplsoftwares.online",
       "https://fbrtestcase.inplsoftwares.online",
       "*",
     ],

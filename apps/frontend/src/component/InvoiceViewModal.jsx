@@ -141,7 +141,6 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
     if (num === 0) return "Zero";
 
     const numStr = Math.floor(num).toString();
-    const decimalPart = (num % 1).toFixed(2).substring(2);
 
     if (numStr.length <= 3) {
       return convertLessThanOneThousand(parseInt(numStr));

@@ -120,9 +120,12 @@
     font-weight: bold;
     font-size: 12px;
     clear: both;
-    white-space: pre-wrap;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.4;
     position: relative;
     bottom: 140px;
+    max-width: 100%;
   }
 
   /* QR box styling for print */
@@ -223,9 +226,12 @@
   font-weight: bold;
   font-size: 12px;
   clear: both;
-  white-space: pre-wrap;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
   position: relative;
   bottom: 140px;
+  max-width: 100%;
 }
 
 .invoice-view-modal .qr-box {

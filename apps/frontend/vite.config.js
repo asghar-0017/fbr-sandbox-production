@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5174,
     proxy: {
       "/api": {
-        target: "https://signs-now.inplsoftwares.online",
+        target: "https://paramount-corp.inplsoftwares.online",
         changeOrigin: true,
         secure: false,
       },

@@ -1004,7 +1004,8 @@ export const printInvoice = async (req, res) => {
         companyLogoBase64,
         convertToWords: (amount) => {
           const words = toWords(Math.floor(amount || 0));
-          return words.charAt(0).toUpperCase() + words.slice(1);
+          // Remove commas from the output and capitalize first letter
+          return words.replace(/,/g, '').charAt(0).toUpperCase() + words.replace(/,/g, '').slice(1);
         },
       }
     );

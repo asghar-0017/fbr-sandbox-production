@@ -42,7 +42,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", "https://gw.fbr.gov.pk", "https://anwer-tex.inplsoftwares.online"],
+        connectSrc: ["'self'", "https://gw.fbr.gov.pk", "https://central-timber.inplsoftwares.online"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
@@ -55,8 +55,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5174",
-      "https://anwer-tex.inplsoftwares.online",
-      "https://anwer-tex.inplsoftwares.online",
+      "https://central-timber.inplsoftwares.online",
+      "https://central-timber.inplsoftwares.online",
       "https://fbrtestcase.inplsoftwares.online",
       "*",
     ],

@@ -1468,6 +1468,7 @@ export default function ProductionFoam() {
                 handleItemChange={handleItemChange}
                 transactionTypeId={formData.transactionTypeId}
                 selectedProvince={formData.sellerProvince}
+                sellerProvince={formData.sellerProvince}
               />
               <SROScheduleNumber
                 key={`SROScheduleNumber-${index}`}
@@ -1476,6 +1477,7 @@ export default function ProductionFoam() {
                 disabled={!item.isSROScheduleEnabled}
                 handleItemChange={handleItemChange}
                 selectedProvince={formData.sellerProvince}
+                sellerProvince={formData.sellerProvince}
               />
               <SROItem
                 key={`SROItem-${index}`}

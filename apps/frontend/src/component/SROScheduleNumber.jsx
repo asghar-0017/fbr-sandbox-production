@@ -2,6 +2,7 @@ import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { fetchData } from "../API/GetApi";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
+import { getSellerProvinceCode } from "../utils/provinceMatcher";
 
 const SROScheduleNumber = ({
   index,
@@ -9,81 +10,10 @@ const SROScheduleNumber = ({
   handleItemChange,
   disabled,
   selectedProvince,
+  sellerProvince,
 }) => {
   const { tokensLoaded } = useTenantSelection();
   const [sro, setSro] = useState([]);
-
-  // Function to find province with flexible matching
-  const findProvince = (provinceResponse, selectedProvince) => {
-    if (!provinceResponse || !Array.isArray(provinceResponse)) {
-      return null;
-    }
-
-    // First try exact match
-    let province = provinceResponse.find(
-      (prov) => prov.stateProvinceDesc === selectedProvince
-    );
-
-    if (province) {
-      return province;
-    }
-
-    // Try case-insensitive match
-    province = provinceResponse.find(
-      (prov) =>
-        prov.stateProvinceDesc.toLowerCase() === selectedProvince.toLowerCase()
-    );
-
-    if (province) {
-      return province;
-    }
-
-    // Try partial match (e.g., "SINDH" might match "SINDH PROVINCE")
-    province = provinceResponse.find(
-      (prov) =>
-        prov.stateProvinceDesc
-          .toLowerCase()
-          .includes(selectedProvince.toLowerCase()) ||
-        selectedProvince
-          .toLowerCase()
-          .includes(prov.stateProvinceDesc.toLowerCase())
-    );
-
-    if (province) {
-      return province;
-    }
-
-    // Try common variations
-    const variations = {
-      SINDH: ["SINDH PROVINCE", "SINDH", "Sindh", "Sindh Province"],
-      PUNJAB: ["PUNJAB PROVINCE", "PUNJAB", "Punjab", "Punjab Province"],
-      KPK: ["KHYBER PAKHTUNKHWA", "KPK", "Khyber Pakhtunkhwa"],
-      BALOCHISTAN: ["BALOCHISTAN PROVINCE", "BALOCHISTAN", "Balochistan"],
-      FEDERAL: [
-        "FEDERAL TERRITORY",
-        "FEDERAL",
-        "Federal Territory",
-        "ISLAMABAD",
-      ],
-      AJK: ["AZAD JAMMU & KASHMIR", "AJK", "Azad Jammu & Kashmir"],
-      GB: ["GILGIT BALTISTAN", "GB", "Gilgit Baltistan"],
-    };
-
-    const selectedProvinceUpper = selectedProvince.toUpperCase();
-    if (variations[selectedProvinceUpper]) {
-      for (const variation of variations[selectedProvinceUpper]) {
-        province = provinceResponse.find(
-          (prov) =>
-            prov.stateProvinceDesc.toUpperCase() === variation.toUpperCase()
-        );
-        if (province) {
-          return province;
-        }
-      }
-    }
-
-    return null;
-  };
 
   const getSRO = async () => {
     try {
@@ -102,39 +32,87 @@ const SROScheduleNumber = ({
         return;
       }
 
-      const provinceResponse = JSON.parse(
-        localStorage.getItem("provinceResponse") || "[]"
-      );
-      const selectedProvinceObj = findProvince(
-        provinceResponse,
-        selectedProvince
-      );
+      // Determine which province to use for SRO selection
+      let provinceToUse = null;
+      let provinceCode = null;
 
-      if (!selectedProvinceObj) {
-        console.warn(
-          `Province not found in provinceResponse: ${selectedProvince}`
-        );
+      if (sellerProvince) {
+        // Use seller's province if available
+        console.log(`Using seller's province for SRO: "${sellerProvince}"`);
+        try {
+          provinceCode = await getSellerProvinceCode(sellerProvince);
+          if (provinceCode) {
+            provinceToUse = sellerProvince;
+            console.log(`Found province code ${provinceCode} for seller province "${sellerProvince}" in SRO component`);
+          } else {
+            console.warn(`Could not determine province code for seller province "${sellerProvince}" in SRO component`);
+          }
+        } catch (error) {
+          console.error("Error getting seller province code in SRO component:", error);
+        }
+      }
+
+      // Fallback to selectedProvince if seller province failed or not available
+      if (!provinceCode && selectedProvince) {
+        console.log(`Falling back to selected province for SRO: "${selectedProvince}"`);
+        
+        // Get the full province data from localStorage
+        const provinceResponseRaw = localStorage.getItem("provinceResponse");
+        
+        if (!provinceResponseRaw) {
+          console.warn("No province data available in localStorage for SRO");
+          return;
+        }
+
+        try {
+          const provinceResponse = JSON.parse(provinceResponseRaw);
+          
+          if (!Array.isArray(provinceResponse)) {
+            console.error("Province response is not an array in SRO component");
+            return;
+          }
+
+          const selectedProvinceObj = provinceResponse.find(
+            (prov) => prov.stateProvinceDesc === selectedProvince
+          );
+
+          if (!selectedProvinceObj) {
+            console.warn(
+              `Province not found in provinceResponse: ${selectedProvince}`
+            );
+            return;
+          }
+
+          provinceCode = selectedProvinceObj.stateProvinceCode;
+          provinceToUse = selectedProvince;
+          console.log("Found province code for SRO:", provinceCode);
+        } catch (parseError) {
+          console.error("Error parsing province data in SRO component:", parseError);
+          return;
+        }
+      }
+
+      if (!provinceCode) {
+        console.error("No province code available for SRO selection");
         return;
       }
 
-      const stateProvinceCode = selectedProvinceObj?.stateProvinceCode;
-
       const response = await fetchData(
-        `pdi/v1/SroSchedule?rate_id=${RateId}&date=04-Feb-2024&origination_supplier_csv=${stateProvinceCode}`
+        `pdi/v1/SroSchedule?rate_id=${RateId}&date=04-Feb-2024&origination_supplier_csv=${provinceCode}`
       );
       console.log(`SRO for item ${index}:`, response);
       setSro(response);
       return response;
     } catch (error) {
-      console.error("Error fetching rates:", error);
+      console.error("Error fetching SRO:", error);
       return [];
     }
   };
 
-  // Fetch rates on component mount and when rate changes
+  // Fetch SRO on component mount and when rate changes
   useEffect(() => {
     getSRO();
-  }, [selectedProvince, tokensLoaded, index, item.rate]);
+  }, [selectedProvince, sellerProvince, tokensLoaded, index, item.rate]);
 
   // Handle editing case - set SROId when editing an invoice
   useEffect(() => {

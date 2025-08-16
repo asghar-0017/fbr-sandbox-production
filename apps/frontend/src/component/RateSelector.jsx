@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { fetchData } from "../API/GetApi";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
+import { getRatesForSellerProvince, getSellerProvinceCode } from "../utils/provinceMatcher";
 
 const RateSelector = ({
   index,
@@ -17,6 +18,7 @@ const RateSelector = ({
   handleItemChange,
   transactionTypeId,
   selectedProvince,
+  sellerProvince, // New prop for seller's province
 }) => {
   const { tokensLoaded } = useTenantSelection();
   const [rates, setRates] = useState([]);
@@ -27,24 +29,43 @@ const RateSelector = ({
     const effectiveTransactionTypeId =
       overrideTransactionTypeId || transactionTypeId;
 
-    if (!effectiveTransactionTypeId || !selectedProvince) {
-      console.log("Missing required data:", {
-        effectiveTransactionTypeId,
-        selectedProvince,
-      });
-      setRates([]);
-      return null;
-    }
-
     // Check if tokens are loaded before making API call
     if (!tokensLoaded) {
       console.warn("Tokens not loaded yet, skipping rate fetch");
       setRates([]);
-      return;
+      return null;
     }
 
-    setLoading(true);
-    try {
+    if (!effectiveTransactionTypeId) {
+      console.log("Missing transaction type ID:", { effectiveTransactionTypeId });
+      setRates([]);
+      return null;
+    }
+
+    // Determine which province to use for rate selection
+    let provinceToUse = null;
+    let provinceCode = null;
+
+    if (sellerProvince) {
+      // Use seller's province if available
+      console.log(`Using seller's province: "${sellerProvince}"`);
+      try {
+        provinceCode = await getSellerProvinceCode(sellerProvince);
+        if (provinceCode) {
+          provinceToUse = sellerProvince;
+          console.log(`Found province code ${provinceCode} for seller province "${sellerProvince}"`);
+        } else {
+          console.warn(`Could not determine province code for seller province "${sellerProvince}"`);
+        }
+      } catch (error) {
+        console.error("Error getting seller province code:", error);
+      }
+    }
+
+    // Fallback to selectedProvince if seller province failed or not available
+    if (!provinceCode && selectedProvince) {
+      console.log(`Falling back to selected province: "${selectedProvince}"`);
+      
       // Get the full province data from localStorage
       const provinceResponseRaw = localStorage.getItem("provinceResponse");
 
@@ -65,7 +86,7 @@ const RateSelector = ({
       if (!Array.isArray(provinceResponse)) {
         console.error("Province response is not an array:", provinceResponse);
         setRates([]);
-        return;
+        return null;
       }
 
       console.log(
@@ -88,14 +109,24 @@ const RateSelector = ({
           provinceResponse.map((p) => p.stateProvinceDesc)
         );
         setRates([]);
-        return;
+        return null;
       }
 
-      const stateProvinceCode = selectedProvinceObj.stateProvinceCode;
-      console.log("Found province code:", stateProvinceCode);
+      provinceCode = selectedProvinceObj.stateProvinceCode;
+      provinceToUse = selectedProvince;
+      console.log("Found province code:", provinceCode);
+    }
 
+    if (!provinceCode) {
+      console.error("No province code available for rate selection");
+      setRates([]);
+      return null;
+    }
+
+    setLoading(true);
+    try {
       const response = await fetchData(
-        `pdi/v2/SaleTypeToRate?date=24-Feb-2024&transTypeId=${effectiveTransactionTypeId}&originationSupplier=${stateProvinceCode}`
+        `pdi/v2/SaleTypeToRate?date=24-Feb-2024&transTypeId=${effectiveTransactionTypeId}&originationSupplier=${provinceCode}`
       );
       console.log("Rate Response:", response);
       console.log("Transaction Type ID:", effectiveTransactionTypeId);
@@ -154,8 +185,8 @@ const RateSelector = ({
       return;
     }
 
-    if (!selectedProvince) {
-      console.warn("Province not selected yet");
+    if (!selectedProvince && !sellerProvince) {
+      console.warn("No province available (neither selected nor seller province)");
       return;
     }
 
@@ -165,20 +196,20 @@ const RateSelector = ({
   // Fetch rates when dependencies change (only for editing mode)
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.rate && transactionTypeId && selectedProvince) {
+    if (isEditing && item.rate && transactionTypeId && (selectedProvince || sellerProvince)) {
       getRateData();
     }
-  }, [transactionTypeId, selectedProvince, tokensLoaded]);
+  }, [transactionTypeId, selectedProvince, sellerProvince, tokensLoaded]);
 
   // Clear rates and fetch new ones when transactionTypeId changes
   useEffect(() => {
-    if (transactionTypeId && selectedProvince && tokensLoaded) {
+    if (transactionTypeId && (selectedProvince || sellerProvince) && tokensLoaded) {
       // Clear previous rates immediately when transaction type changes
       setRates([]);
       // Fetch new rates for the current transaction type
       getRateData();
     }
-  }, [transactionTypeId]);
+  }, [transactionTypeId, selectedProvince, sellerProvince]);
 
   // Additional effect to handle editing when transactionTypeId is set after component mount
   useEffect(() => {
@@ -190,7 +221,7 @@ const RateSelector = ({
       );
       getRateData(transactionTypeId);
     }
-  }, [transactionTypeId, item.rate]);
+  }, [transactionTypeId, item.rate, sellerProvince]);
 
   // Fallback effect to set transactionTypeId for editing when scenario is known but transactionTypeId is missing
   useEffect(() => {
@@ -205,7 +236,7 @@ const RateSelector = ({
         );
         // The parent component should pick this up and set the state
         // Force a re-render by triggering the rate fetch
-        if (selectedProvince) {
+        if (selectedProvince || sellerProvince) {
           console.log(
             "Triggering rate fetch with stored transactionTypeId:",
             storedTransactionTypeId
@@ -219,7 +250,7 @@ const RateSelector = ({
         );
       }
     }
-  }, [item.rate, transactionTypeId, selectedProvince]);
+  }, [item.rate, transactionTypeId, selectedProvince, sellerProvince]);
 
   // Handle editing case - set selectedRateId when editing an invoice
   useEffect(() => {
@@ -307,7 +338,7 @@ const RateSelector = ({
   // Don't show transaction type message if we have a rate value (editing mode) or if transactionTypeId is available
   const showTransactionTypeMessage =
     !transactionTypeId && !isEditingWithRate && !item.rate;
-  const showProvinceMessage = !showTransactionTypeMessage && !selectedProvince;
+  const showProvinceMessage = !showTransactionTypeMessage && !selectedProvince && !sellerProvince;
 
   return (
     <Box sx={{ flex: "1 1 22%", minWidth: "180px" }}>
@@ -336,7 +367,7 @@ const RateSelector = ({
             {showTransactionTypeMessage ? (
               <MenuItem value="">Please select transaction type first</MenuItem>
             ) : showProvinceMessage ? (
-              <MenuItem value="">Please select province first</MenuItem>
+              <MenuItem value="">Please select province or ensure seller province is set</MenuItem>
             ) : loading ? (
               <MenuItem value="">Loading rates...</MenuItem>
             ) : rates.length === 0 ? (
@@ -358,7 +389,7 @@ const RateSelector = ({
           )}
           {showProvinceMessage && (
             <Box sx={{ color: "error.main", fontSize: 13, mt: 0.5, ml: 1 }}>
-              Please select province first.
+              Please select province or ensure seller province is set.
             </Box>
           )}
         </FormControl>
@@ -367,7 +398,7 @@ const RateSelector = ({
         {transactionTypeId && (
           <Button
             onClick={handleFetchRates}
-            disabled={loading || !tokensLoaded || !selectedProvince}
+            disabled={loading || !tokensLoaded || (!selectedProvince && !sellerProvince)}
             variant="outlined"
             size="small"
             sx={{

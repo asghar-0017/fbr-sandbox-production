@@ -111,4 +111,4 @@ const startServer = async () => {
   }
 };
 
-export default startServer;
+export default startServer

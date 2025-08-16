@@ -77,9 +77,7 @@
       font-weight: bold;
       font-size: 12px;
       clear: both;
-      white-space: normal;
-      word-wrap: break-word;
-      line-height: 1.4;
+      white-space: pre-wrap;
       /* Enable wrapping for long text */
     }
 
@@ -274,7 +272,7 @@
     </div>
 
    <div class="total-in-words" style="position: relative; bottom: 140px;">
-  <p>Total in words:<br/> <%= convertToWords(grandTotal).replace(/,/g, '') %> Rupees Only</p>
+  <p>Total in words:<br/> <%= convertToWords(grandTotal) %> Rupees Only</p>
 </div>
 
 

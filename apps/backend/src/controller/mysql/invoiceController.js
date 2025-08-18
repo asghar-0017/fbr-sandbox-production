@@ -59,7 +59,9 @@ const generateShortInvoiceId = async (Invoice, prefix) => {
 
     if (lastInvoice && lastInvoice.invoice_number) {
       // Extract the number from the last invoice ID (e.g., "DRAFT_123456" -> 123456)
-      const match = lastInvoice.invoice_number.match(new RegExp(`${prefix}_(\\d+)`));
+      const match = lastInvoice.invoice_number.match(
+        new RegExp(`${prefix}_(\\d+)`)
+      );
       if (match) {
         nextNumber = parseInt(match[1]) + 1;
       }
@@ -205,6 +207,7 @@ export const createInvoice = async (req, res) => {
             furtherTax: cleanNumericValue(item.furtherTax),
             sroScheduleNo: cleanValue(item.sroScheduleNo),
             fedPayable: cleanNumericValue(item.fedPayable),
+            advanceIncomeTax: cleanNumericValue(item.advanceIncomeTax),
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
@@ -294,7 +297,10 @@ export const saveInvoice = async (req, res) => {
 
         // Check if the current invoice number already has DRAFT_ prefix
         let updatedInvoiceNumber = invoice.invoice_number;
-        if (!updatedInvoiceNumber || !updatedInvoiceNumber.startsWith("DRAFT_")) {
+        if (
+          !updatedInvoiceNumber ||
+          !updatedInvoiceNumber.startsWith("DRAFT_")
+        ) {
           // Generate a new DRAFT_ invoice number if it doesn't have the right prefix
           updatedInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
         }
@@ -330,7 +336,10 @@ export const saveInvoice = async (req, res) => {
         });
       } else {
         // Generate a temporary invoice number for draft
-        const tempInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
+        const tempInvoiceNumber = await generateShortInvoiceId(
+          Invoice,
+          "DRAFT"
+        );
         // Generate system invoice ID
         const systemInvoiceId = await generateSystemInvoiceId(Invoice);
 
@@ -403,6 +412,7 @@ export const saveInvoice = async (req, res) => {
             furtherTax: cleanNumericValue(item.furtherTax),
             sroScheduleNo: cleanValue(item.sroScheduleNo),
             fedPayable: cleanNumericValue(item.fedPayable),
+            advanceIncomeTax: cleanNumericValue(item.advanceIncomeTax),
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
@@ -623,6 +633,7 @@ export const saveAndValidateInvoice = async (req, res) => {
             furtherTax: cleanNumericValue(item.furtherTax),
             sroScheduleNo: cleanValue(item.sroScheduleNo),
             fedPayable: cleanNumericValue(item.fedPayable),
+            advanceIncomeTax: cleanNumericValue(item.advanceIncomeTax),
             discount: cleanNumericValue(item.discount),
             saleType: cleanValue(item.saleType),
             sroItemSerialNo: cleanValue(item.sroItemSerialNo),
@@ -1005,7 +1016,10 @@ export const printInvoice = async (req, res) => {
         convertToWords: (amount) => {
           const words = toWords(Math.floor(amount || 0));
           // Remove commas from the output and capitalize first letter
-          return words.replace(/,/g, '').charAt(0).toUpperCase() + words.replace(/,/g, '').slice(1);
+          return (
+            words.replace(/,/g, "").charAt(0).toUpperCase() +
+            words.replace(/,/g, "").slice(1)
+          );
         },
       }
     );
@@ -1808,7 +1822,10 @@ export const bulkCreateInvoices = async (req, res) => {
         }
 
         // Generate a temporary invoice number for draft (will be replaced when posted to FBR)
-        const tempInvoiceNumber = await generateShortInvoiceId(Invoice, "DRAFT");
+        const tempInvoiceNumber = await generateShortInvoiceId(
+          Invoice,
+          "DRAFT"
+        );
 
         // Normalize provinces to title case
         const normalizeProvince = (province) => {
@@ -1916,6 +1933,7 @@ export const bulkCreateInvoices = async (req, res) => {
                 furtherTax: cleanNumericValue(item.furtherTax),
                 sroScheduleNo: cleanValue(item.sroScheduleNo),
                 fedPayable: cleanNumericValue(item.fedPayable),
+                advanceIncomeTax: cleanNumericValue(item.advanceIncomeTax),
                 discount: cleanNumericValue(item.discount),
                 saleType: cleanValue(item.saleType),
                 sroItemSerialNo: cleanValue(item.sroItemSerialNo),
@@ -2199,7 +2217,9 @@ export const getDocumentTypesController = async (req, res) => {
       });
     }
 
-    console.log(`Fetching document types for tenant: ${tenantId}, environment: ${environment}`);
+    console.log(
+      `Fetching document types for tenant: ${tenantId}, environment: ${environment}`
+    );
 
     // Get tenant data to check FBR credentials
     const tenant = await Tenant.findByPk(tenantId);
@@ -2243,7 +2263,8 @@ export const getDocumentTypesController = async (req, res) => {
     } else if (error.response?.status === 500) {
       return res.status(503).json({
         success: false,
-        message: "FBR system is temporarily unavailable. Please try again later.",
+        message:
+          "FBR system is temporarily unavailable. Please try again later.",
       });
     } else if (error.code === "ECONNABORTED") {
       return res.status(408).json({
@@ -2258,7 +2279,8 @@ export const getDocumentTypesController = async (req, res) => {
     } else {
       return res.status(500).json({
         success: false,
-        message: error.message || "Unable to fetch document types from FBR API.",
+        message:
+          error.message || "Unable to fetch document types from FBR API.",
       });
     }
   }
@@ -2280,7 +2302,9 @@ export const getProvincesController = async (req, res) => {
       });
     }
 
-    console.log(`Fetching provinces for tenant: ${tenantId}, environment: ${environment}`);
+    console.log(
+      `Fetching provinces for tenant: ${tenantId}, environment: ${environment}`
+    );
 
     // Get tenant data to check FBR credentials
     const tenant = await Tenant.findByPk(tenantId);
@@ -2324,7 +2348,8 @@ export const getProvincesController = async (req, res) => {
     } else if (error.response?.status === 500) {
       return res.status(503).json({
         success: false,
-        message: "FBR system is temporarily unavailable. Please try again later.",
+        message:
+          "FBR system is temporarily unavailable. Please try again later.",
       });
     } else if (error.code === "ECONNABORTED") {
       return res.status(408).json({
@@ -2362,7 +2387,9 @@ export const validateInvoiceDataController = async (req, res) => {
       });
     }
 
-    console.log(`Validating invoice data for tenant: ${tenantId}, environment: ${environment}`);
+    console.log(
+      `Validating invoice data for tenant: ${tenantId}, environment: ${environment}`
+    );
 
     // Get tenant data to check FBR credentials
     const tenant = await Tenant.findByPk(tenantId);
@@ -2382,7 +2409,11 @@ export const validateInvoiceDataController = async (req, res) => {
     }
 
     // Call FBR service to validate invoice data
-    const validationResult = await validateInvoiceData(invoiceData, environment, token);
+    const validationResult = await validateInvoiceData(
+      invoiceData,
+      environment,
+      token
+    );
 
     res.json({
       success: true,
@@ -2407,7 +2438,8 @@ export const validateInvoiceDataController = async (req, res) => {
     } else if (error.response?.status === 500) {
       return res.status(503).json({
         success: false,
-        message: "FBR system is temporarily unavailable. Please try again later.",
+        message:
+          "FBR system is temporarily unavailable. Please try again later.",
       });
     } else if (error.code === "ECONNABORTED") {
       return res.status(408).json({
@@ -2422,7 +2454,8 @@ export const validateInvoiceDataController = async (req, res) => {
     } else {
       return res.status(500).json({
         success: false,
-        message: error.message || "Unable to validate invoice data with FBR API.",
+        message:
+          error.message || "Unable to validate invoice data with FBR API.",
       });
     }
   }
@@ -2445,7 +2478,9 @@ export const submitInvoiceDataController = async (req, res) => {
       });
     }
 
-    console.log(`Submitting invoice data for tenant: ${tenantId}, environment: ${environment}`);
+    console.log(
+      `Submitting invoice data for tenant: ${tenantId}, environment: ${environment}`
+    );
 
     // Get tenant data to check FBR credentials
     const tenant = await Tenant.findByPk(tenantId);
@@ -2465,7 +2500,11 @@ export const submitInvoiceDataController = async (req, res) => {
     }
 
     // Call FBR service to submit invoice data
-    const submissionResult = await submitInvoiceData(invoiceData, environment, token);
+    const submissionResult = await submitInvoiceData(
+      invoiceData,
+      environment,
+      token
+    );
 
     res.json({
       success: true,
@@ -2490,7 +2529,8 @@ export const submitInvoiceDataController = async (req, res) => {
     } else if (error.response?.status === 500) {
       return res.status(503).json({
         success: false,
-        message: "FBR system is temporarily unavailable. Please try again later.",
+        message:
+          "FBR system is temporarily unavailable. Please try again later.",
       });
     } else if (error.code === "ECONNABORTED") {
       return res.status(408).json({

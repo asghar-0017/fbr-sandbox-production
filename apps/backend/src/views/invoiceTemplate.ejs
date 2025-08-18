@@ -190,6 +190,7 @@
         <th>Extra Tax</th>
         <th>Further Tax</th>
         <th>FED</th>
+        <th>Advance Income Tax</th>
         <th>Discount (%)</th>
         <th>Sales Tax Withheld</th>
         <th>Total (incl. Tax)</th>
@@ -229,6 +230,9 @@
             <%= formatNumber(item.fedPayable) %>
           </td>
           <td>
+            <%= formatNumber(item.advanceIncomeTax) %>
+          </td>
+          <td>
             <%= formatNumber(item.discount) %>
           </td>
           <td>
@@ -248,6 +252,7 @@
     const further = invoice.items.reduce((sum, i) => sum + parseFloat(i.furtherTax || 0), 0);
     const extra = invoice.items.reduce((sum, i) => sum + parseFloat(i.extraTax || 0), 0);
     const fed = invoice.items.reduce((sum, i) => sum + parseFloat(i.fedPayable || 0), 0);
+    const advanceIncomeTax = invoice.items.reduce((sum, i) => sum + parseFloat(i.advanceIncomeTax || 0), 0);
     const dis = invoice.items.reduce((sum, i) => sum + parseFloat(i.discount || 0), 0);
     const withheld = invoice.items.reduce((sum, i) => sum + parseFloat(i.salesTaxWithheldAtSource || 0), 0);
   const grandTotal = invoice.items.reduce((sum, i) => sum + parseFloat(i.totalValues || 0), 0);
@@ -263,6 +268,8 @@
       <p>Extra Tax: <%= formatNumber(extra) %>
       </p>
       <p>fedPayable: <%= formatNumber(fed) %>
+      </p>
+      <p>Advance Income Tax: <%= formatNumber(advanceIncomeTax) %>
       </p>
       <p>Discount: <%= formatNumber(dis) %>
       </p>

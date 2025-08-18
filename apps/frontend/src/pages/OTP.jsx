@@ -35,8 +35,26 @@ const OTP = () => {
     setLoading(true);
     try {
       const email = localStorage.getItem("email");
+      const usedOtp = localStorage.getItem("usedOtp");
+
       if (!email) {
         setError("Email not found. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if the OTP has already been used
+      if (usedOtp === otp) {
+        const errorMsg = "This OTP has expired. Please request a new one.";
+        // toast.error(errorMsg, {
+        //   position: "top-right",
+        //   autoClose: 5000,
+        //   hideProgressBar: false,
+        //   closeOnClick: true,
+        //   pauseOnHover: true,
+        //   draggable: true,
+        // });
+        setError(errorMsg);
         setLoading(false);
         return;
       }
@@ -46,15 +64,19 @@ const OTP = () => {
         .then((res) => {
           if (res.data.success) {
             // Show success toast
-            toast.success("OTP verified successfully! Please set your new password.", {
-              position: "top-center",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-            });
+            toast.success(
+              "OTP verified successfully! Please set your new password.",
+              {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              }
+            );
             localStorage.setItem("resetCode", otp);
+            localStorage.setItem("usedOtp", otp); // Mark OTP as used
             navigate("/reset-password");
             console.log(res);
           } else {
@@ -72,7 +94,8 @@ const OTP = () => {
         })
         .catch((err) => {
           console.error(err);
-          const errorMsg = err.response?.data?.message || "Invalid verification code";
+          const errorMsg =
+            err.response?.data?.message || "Invalid verification code";
           toast.error(errorMsg, {
             position: "top-center",
             autoClose: 5000,
@@ -150,9 +173,9 @@ const OTP = () => {
 
           <form onSubmit={handleSubmit}>
             <Box sx={{ mb: 3 }}>
-              <MuiOtpInput 
-                length={6} 
-                value={otp} 
+              <MuiOtpInput
+                length={6}
+                value={otp}
                 onChange={handleChange}
                 sx={{
                   "& .MuiOutlinedInput-root": {
@@ -161,7 +184,7 @@ const OTP = () => {
                 }}
               />
             </Box>
-            
+
             {error && (
               <Typography
                 color="error"
@@ -171,7 +194,7 @@ const OTP = () => {
                 {error}
               </Typography>
             )}
-            
+
             <Button
               type="submit"
               variant="contained"
@@ -194,7 +217,7 @@ const OTP = () => {
             >
               {loading ? "Verifying..." : "Verify OTP"}
             </Button>
-            
+
             <Button
               variant="outlined"
               size="small"

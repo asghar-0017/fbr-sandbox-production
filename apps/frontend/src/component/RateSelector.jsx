@@ -10,7 +10,10 @@ import {
 } from "@mui/material";
 import { fetchData } from "../API/GetApi";
 import { useTenantSelection } from "../Context/TenantSelectionProvider";
-import { getRatesForSellerProvince, getSellerProvinceCode } from "../utils/provinceMatcher";
+import {
+  getRatesForSellerProvince,
+  getSellerProvinceCode,
+} from "../utils/provinceMatcher";
 
 const RateSelector = ({
   index,
@@ -37,7 +40,9 @@ const RateSelector = ({
     }
 
     if (!effectiveTransactionTypeId) {
-      console.log("Missing transaction type ID:", { effectiveTransactionTypeId });
+      console.log("Missing transaction type ID:", {
+        effectiveTransactionTypeId,
+      });
       setRates([]);
       return null;
     }
@@ -53,9 +58,13 @@ const RateSelector = ({
         provinceCode = await getSellerProvinceCode(sellerProvince);
         if (provinceCode) {
           provinceToUse = sellerProvince;
-          console.log(`Found province code ${provinceCode} for seller province "${sellerProvince}"`);
+          console.log(
+            `Found province code ${provinceCode} for seller province "${sellerProvince}"`
+          );
         } else {
-          console.warn(`Could not determine province code for seller province "${sellerProvince}"`);
+          console.warn(
+            `Could not determine province code for seller province "${sellerProvince}"`
+          );
         }
       } catch (error) {
         console.error("Error getting seller province code:", error);
@@ -65,7 +74,7 @@ const RateSelector = ({
     // Fallback to selectedProvince if seller province failed or not available
     if (!provinceCode && selectedProvince) {
       console.log(`Falling back to selected province: "${selectedProvince}"`);
-      
+
       // Get the full province data from localStorage
       const provinceResponseRaw = localStorage.getItem("provinceResponse");
 
@@ -186,7 +195,9 @@ const RateSelector = ({
     }
 
     if (!selectedProvince && !sellerProvince) {
-      console.warn("No province available (neither selected nor seller province)");
+      console.warn(
+        "No province available (neither selected nor seller province)"
+      );
       return;
     }
 
@@ -196,14 +207,23 @@ const RateSelector = ({
   // Fetch rates when dependencies change (only for editing mode)
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.rate && transactionTypeId && (selectedProvince || sellerProvince)) {
+    if (
+      isEditing &&
+      item.rate &&
+      transactionTypeId &&
+      (selectedProvince || sellerProvince)
+    ) {
       getRateData();
     }
   }, [transactionTypeId, selectedProvince, sellerProvince, tokensLoaded]);
 
   // Clear rates and fetch new ones when transactionTypeId changes
   useEffect(() => {
-    if (transactionTypeId && (selectedProvince || sellerProvince) && tokensLoaded) {
+    if (
+      transactionTypeId &&
+      (selectedProvince || sellerProvince) &&
+      tokensLoaded
+    ) {
       // Clear previous rates immediately when transaction type changes
       setRates([]);
       // Fetch new rates for the current transaction type
@@ -255,7 +275,7 @@ const RateSelector = ({
   // Handle editing case - set selectedRateId when editing an invoice
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.rate && rates.length > 0) {
+    if ((isEditing || item.rate) && rates.length > 0) {
       console.log("Editing mode detected, looking for rate:", item.rate);
       console.log(
         "Available rates:",
@@ -273,8 +293,6 @@ const RateSelector = ({
         console.log(
           `Set selectedRateId for item ${index} editing: ${selectedRateObj.ratE_ID}`
         );
-        // Clear the editing flag
-        localStorage.removeItem("editingInvoice");
       } else {
         console.warn(`Rate not found in available rates: ${item.rate}`);
       }
@@ -284,7 +302,7 @@ const RateSelector = ({
   // Additional effect to handle editing when rate data is loaded after the editing flag is set
   useEffect(() => {
     const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.rate && rates.length > 0) {
+    if ((isEditing || item.rate) && rates.length > 0) {
       // This effect runs when rate data is loaded and we're in editing mode
       console.log(
         "Editing mode detected (delayed), looking for rate:",
@@ -302,8 +320,6 @@ const RateSelector = ({
         console.log(
           `Set selectedRateId for item ${index} editing (delayed): ${selectedRateObj.ratE_ID}`
         );
-        // Clear the editing flag
-        localStorage.removeItem("editingInvoice");
       } else {
         console.warn(
           `Rate not found in available rates (delayed): ${item.rate}`
@@ -338,7 +354,8 @@ const RateSelector = ({
   // Don't show transaction type message if we have a rate value (editing mode) or if transactionTypeId is available
   const showTransactionTypeMessage =
     !transactionTypeId && !isEditingWithRate && !item.rate;
-  const showProvinceMessage = !showTransactionTypeMessage && !selectedProvince && !sellerProvince;
+  const showProvinceMessage =
+    !showTransactionTypeMessage && !selectedProvince && !sellerProvince;
 
   return (
     <Box sx={{ flex: "1 1 22%", minWidth: "180px" }}>
@@ -367,7 +384,9 @@ const RateSelector = ({
             {showTransactionTypeMessage ? (
               <MenuItem value="">Please select transaction type first</MenuItem>
             ) : showProvinceMessage ? (
-              <MenuItem value="">Please select province or ensure seller province is set</MenuItem>
+              <MenuItem value="">
+                Please select province or ensure seller province is set
+              </MenuItem>
             ) : loading ? (
               <MenuItem value="">Loading rates...</MenuItem>
             ) : rates.length === 0 ? (
@@ -398,7 +417,9 @@ const RateSelector = ({
         {transactionTypeId && (
           <Button
             onClick={handleFetchRates}
-            disabled={loading || !tokensLoaded || (!selectedProvince && !sellerProvince)}
+            disabled={
+              loading || !tokensLoaded || (!selectedProvince && !sellerProvince)
+            }
             variant="outlined"
             size="small"
             sx={{

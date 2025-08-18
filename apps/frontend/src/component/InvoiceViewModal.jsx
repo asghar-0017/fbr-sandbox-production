@@ -68,6 +68,10 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
     (sum, item) => sum + parseFloat(item.fedPayable || 0),
     0
   );
+  const advanceIncomeTaxTotal = (invoice.items || []).reduce(
+    (sum, item) => sum + parseFloat(item.advanceIncomeTax || 0),
+    0
+  );
   const dis = (invoice.items || []).reduce(
     (sum, item) => sum + parseFloat(item.discount || 0),
     0
@@ -470,6 +474,18 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                       p: 1,
                     }}
                   >
+                    Advance Income Tax
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      bgcolor: "#2c7c93",
+                      color: "white",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      fontSize: "11px",
+                      p: 1,
+                    }}
+                  >
                     Discount
                   </TableCell>
                   <TableCell
@@ -613,6 +629,22 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                         p: 1,
                       }}
                     >
+                      {item.advanceIncomeTax === null ||
+                      item.advanceIncomeTax === undefined ||
+                      item.advanceIncomeTax === ""
+                        ? "N/A"
+                        : formatNumberWithCommas(
+                            parseFloat(item.advanceIncomeTax)
+                          )}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
                       {formatNumberWithCommas(parseFloat(item.discount))}
                     </TableCell>
                     <TableCell
@@ -676,6 +708,10 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 fedPayable: {formatNumberWithCommas(fed)}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Advance Income Tax:{" "}
+                {formatNumberWithCommas(advanceIncomeTaxTotal)}
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 Discount: {formatNumberWithCommas(dis)}

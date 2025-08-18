@@ -43,22 +43,31 @@ const SROScheduleNumber = ({
           provinceCode = await getSellerProvinceCode(sellerProvince);
           if (provinceCode) {
             provinceToUse = sellerProvince;
-            console.log(`Found province code ${provinceCode} for seller province "${sellerProvince}" in SRO component`);
+            console.log(
+              `Found province code ${provinceCode} for seller province "${sellerProvince}" in SRO component`
+            );
           } else {
-            console.warn(`Could not determine province code for seller province "${sellerProvince}" in SRO component`);
+            console.warn(
+              `Could not determine province code for seller province "${sellerProvince}" in SRO component`
+            );
           }
         } catch (error) {
-          console.error("Error getting seller province code in SRO component:", error);
+          console.error(
+            "Error getting seller province code in SRO component:",
+            error
+          );
         }
       }
 
       // Fallback to selectedProvince if seller province failed or not available
       if (!provinceCode && selectedProvince) {
-        console.log(`Falling back to selected province for SRO: "${selectedProvince}"`);
-        
+        console.log(
+          `Falling back to selected province for SRO: "${selectedProvince}"`
+        );
+
         // Get the full province data from localStorage
         const provinceResponseRaw = localStorage.getItem("provinceResponse");
-        
+
         if (!provinceResponseRaw) {
           console.warn("No province data available in localStorage for SRO");
           return;
@@ -66,7 +75,7 @@ const SROScheduleNumber = ({
 
         try {
           const provinceResponse = JSON.parse(provinceResponseRaw);
-          
+
           if (!Array.isArray(provinceResponse)) {
             console.error("Province response is not an array in SRO component");
             return;
@@ -87,7 +96,10 @@ const SROScheduleNumber = ({
           provinceToUse = selectedProvince;
           console.log("Found province code for SRO:", provinceCode);
         } catch (parseError) {
-          console.error("Error parsing province data in SRO component:", parseError);
+          console.error(
+            "Error parsing province data in SRO component:",
+            parseError
+          );
           return;
         }
       }
@@ -116,8 +128,8 @@ const SROScheduleNumber = ({
 
   // Handle editing case - set SROId when editing an invoice
   useEffect(() => {
-    const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.sroScheduleNo && sro.length > 0) {
+    const hasPrefilledSRO = Boolean(item.sroScheduleNo);
+    if (hasPrefilledSRO && sro.length > 0) {
       console.log(
         `Editing mode detected for item ${index}, looking for SRO schedule:`,
         item.sroScheduleNo
@@ -145,8 +157,8 @@ const SROScheduleNumber = ({
 
   // Additional effect to handle editing when SRO data is loaded after the editing flag is set
   useEffect(() => {
-    const isEditing = localStorage.getItem("editingInvoice") === "true";
-    if (isEditing && item.sroScheduleNo && sro.length > 0) {
+    const hasPrefilledSRO = Boolean(item.sroScheduleNo);
+    if (hasPrefilledSRO && sro.length > 0) {
       // This effect runs when SRO data is loaded and we're in editing mode
       const selectedSROObj = sro.find(
         (sroItem) => sroItem.srO_DESC === item.sroScheduleNo
@@ -182,7 +194,7 @@ const SROScheduleNumber = ({
         <InputLabel id={`sro-schedule-${index}`}>SRO Schedule No</InputLabel>
         <Select
           labelId={`sro-schedule-${index}`}
-          value={item.sroScheduleNo || "N/A"}
+          value={item.sroScheduleNo || (sro.length === 0 ? "N/A" : "")}
           label="SRO Schedule No"
           onChange={handleSROChange}
         >

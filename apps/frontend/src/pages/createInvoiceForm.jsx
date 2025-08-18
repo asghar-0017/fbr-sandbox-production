@@ -188,6 +188,7 @@ export default function CreateInvoice() {
         furtherTax: "0",
         fedPayable: "0",
         discount: "0",
+        advanceIncomeTax: "0",
         isValueSalesManual: false,
         isTotalValuesManual: false,
         isSalesTaxManual: false,
@@ -368,6 +369,69 @@ export default function CreateInvoice() {
   const [loadingTimeout, setLoadingTimeout] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
   const [isSubmitVisible, setIsSubmitVisible] = React.useState(false);
+
+  // Auto-fetch transaction types in edit mode or when a transaction type is already present
+  React.useEffect(() => {
+    const isEditing = localStorage.getItem("editingInvoice") === "true";
+    const hasExistingTransctype = Boolean(
+      transactionTypeId || formData.transctypeId
+    );
+
+    if (
+      (isEditing || hasExistingTransctype) &&
+      transactionTypes.length === 0 &&
+      !transactionTypesLoading &&
+      selectedTenant &&
+      tokensLoaded
+    ) {
+      const fetchTypes = async () => {
+        try {
+          setTransactionTypesLoading(true);
+          setTransactionTypesError(null);
+          const data = await getTransactionTypes();
+          let transactionTypesArray = [];
+          if (Array.isArray(data)) {
+            transactionTypesArray = data;
+          } else if (data && typeof data === "object") {
+            if (data.data && Array.isArray(data.data)) {
+              transactionTypesArray = data.data;
+            } else if (
+              data.transactionTypes &&
+              Array.isArray(data.transactionTypes)
+            ) {
+              transactionTypesArray = data.transactionTypes;
+            } else if (data.results && Array.isArray(data.results)) {
+              transactionTypesArray = data.results;
+            } else {
+              transactionTypesArray = [data];
+            }
+          }
+          if (transactionTypesArray.length > 0) {
+            setTransactionTypes(transactionTypesArray);
+          } else {
+            setTransactionTypesError(
+              "API returned empty transaction types list"
+            );
+          }
+        } catch (error) {
+          setTransactionTypesError(
+            error.message ||
+              "Failed to fetch transaction types from API. Please check your connection and try again."
+          );
+        } finally {
+          setTransactionTypesLoading(false);
+        }
+      };
+      fetchTypes();
+    }
+  }, [
+    transactionTypeId,
+    formData.transctypeId,
+    transactionTypes.length,
+    transactionTypesLoading,
+    selectedTenant,
+    tokensLoaded,
+  ]);
 
   // Add timeout mechanism to prevent infinite loading
   React.useEffect(() => {
@@ -718,19 +782,25 @@ export default function CreateInvoice() {
         // Use backend API instead of calling FBR directly to avoid CSP issues
         fetch(`/api/tenant/${selectedTenant.tenant_id}/provinces`, {
           headers: { Authorization: `Bearer ${token}` },
-        }).then((response) => response.json()).then((data) => {
-          if (data.success) {
-            setProvince(data.data);
-            localStorage.setItem("provinceResponse", JSON.stringify(data.data));
-          } else {
-            console.error("Failed to fetch provinces:", data.message);
-            // Fallback to empty array
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              setProvince(data.data);
+              localStorage.setItem(
+                "provinceResponse",
+                JSON.stringify(data.data)
+              );
+            } else {
+              console.error("Failed to fetch provinces:", data.message);
+              // Fallback to empty array
+              setProvince([]);
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching provinces:", error);
             setProvince([]);
-          }
-        }).catch((error) => {
-          console.error("Error fetching provinces:", error);
-          setProvince([]);
-        }),
+          }),
         // HS codes will be loaded by OptimizedHSCodeSelector component with caching
         Promise.resolve([]),
         (async () => {
@@ -812,19 +882,25 @@ export default function CreateInvoice() {
             // Use backend API instead of calling FBR directly to avoid CSP issues
             fetch(`/api/tenant/${selectedTenant.tenant_id}/provinces`, {
               headers: { Authorization: `Bearer ${token}` },
-            }).then((response) => response.json()).then((data) => {
-              if (data.success) {
-                setProvince(data.data);
-                localStorage.setItem("provinceResponse", JSON.stringify(data.data));
-              } else {
-                console.error("Failed to fetch provinces:", data.message);
-                // Fallback to empty array
-                setProvince(response);
-              }
-            }).catch((error) => {
-              console.error("Error fetching provinces:", error);
-              setProvince([]);
-            }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success) {
+                  setProvince(data.data);
+                  localStorage.setItem(
+                    "provinceResponse",
+                    JSON.stringify(data.data)
+                  );
+                } else {
+                  console.error("Failed to fetch provinces:", data.message);
+                  // Fallback to empty array
+                  setProvince(response);
+                }
+              })
+              .catch((error) => {
+                console.error("Error fetching provinces:", error);
+                setProvince([]);
+              }),
             // HS codes will be loaded by OptimizedHSCodeSelector component with caching
             Promise.resolve([]),
             (async () => {
@@ -1221,7 +1297,8 @@ export default function CreateInvoice() {
           parseFloat(item.salesTaxApplicable || 0) +
           parseFloat(item.furtherTax || 0) +
           parseFloat(item.fedPayable || 0) +
-          parseFloat(item.extraTax || 0);
+          parseFloat(item.extraTax || 0) +
+          parseFloat(item.advanceIncomeTax || 0);
 
         const discountAmount = parseFloat(item.discount || 0);
 
@@ -1668,6 +1745,9 @@ export default function CreateInvoice() {
               furtherTax: Number(Number(rest.furtherTax || 0).toFixed(2)),
               fedPayable: Number(Number(rest.fedPayable || 0).toFixed(2)),
               discount: Number(Number(rest.discount || 0).toFixed(2)),
+              advanceIncomeTax: Number(
+                Number(rest.advanceIncomeTax || 0).toFixed(2)
+              ),
             };
 
             if (rest.saleType?.trim() !== "Goods at Reduced Rate") {
@@ -1918,6 +1998,9 @@ export default function CreateInvoice() {
               furtherTax: Number(Number(rest.furtherTax || 0).toFixed(2)),
               fedPayable: Number(Number(rest.fedPayable || 0).toFixed(2)),
               discount: Number(Number(rest.discount || 0).toFixed(2)),
+              advanceIncomeTax: Number(
+                Number(rest.advanceIncomeTax || 0).toFixed(2)
+              ),
             };
 
             if (rest.saleType?.trim() !== "Goods at Reduced Rate") {
@@ -3782,6 +3865,44 @@ export default function CreateInvoice() {
                           handleItemChange(
                             index,
                             "fedPayable",
+                            numValue.toString()
+                          );
+                        }
+                      }
+                    }}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box sx={{ flex: "1 1 18%", minWidth: "150px" }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Advance Income Tax"
+                    type="text"
+                    value={
+                      item.advanceIncomeTax === "0.00" ||
+                      item.advanceIncomeTax === "0"
+                        ? ""
+                        : formatWithCommasWhileTyping(item.advanceIncomeTax)
+                    }
+                    onChange={(e) => {
+                      const newValue = handleFloatingNumberInput(
+                        e.target.value,
+                        true
+                      );
+                      if (newValue !== null) {
+                        handleItemChange(index, "advanceIncomeTax", newValue);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        const cleanValue = value.replace(/,/g, "");
+                        const numValue = parseFloat(cleanValue);
+                        if (!isNaN(numValue)) {
+                          handleItemChange(
+                            index,
+                            "advanceIncomeTax",
                             numValue.toString()
                           );
                         }

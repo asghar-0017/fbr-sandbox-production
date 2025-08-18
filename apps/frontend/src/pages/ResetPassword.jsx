@@ -51,7 +51,7 @@ const ResetPassword = () => {
     if (newPassword !== confirmPassword) {
       const errorMsg = "Passwords do not match!";
       toast.error(errorMsg, {
-        position: "top-center",
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -64,11 +64,13 @@ const ResetPassword = () => {
     }
 
     // Password validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(newPassword)) {
-      const errorMsg = "Password must be at least 8 characters long and contain uppercase, lowercase, and number";
+      const errorMsg =
+        "Password must be at least 8 characters long and contain uppercase, lowercase, and number";
       toast.error(errorMsg, {
-        position: "top-center",
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -88,7 +90,7 @@ const ResetPassword = () => {
     if (!email) {
       const errorMsg = "Email not found. Please try again.";
       toast.error(errorMsg, {
-        position: "top-center",
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -103,7 +105,7 @@ const ResetPassword = () => {
     if (!code) {
       const errorMsg = "Reset code not found. Please verify your code first.";
       toast.error(errorMsg, {
-        position: "top-center",
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -125,26 +127,29 @@ const ResetPassword = () => {
       });
 
       console.log("Reset response:", response);
-      
+
       if (response.data.success) {
         // Clear stored data
         localStorage.removeItem("email");
         localStorage.removeItem("resetCode");
-        
+
         // Show success toast and navigate
-        toast.success("Password reset successfully! Please login with your new password.", {
-          position: "top-center",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        toast.success(
+          "Password reset successfully! Please login with your new password.",
+          {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
         navigate("/login");
       } else {
         const errorMsg = response.data.message || "Failed to reset password";
         toast.error(errorMsg, {
-          position: "top-center",
+          position: "top-right",
           autoClose: 5000,
           hideProgressBar: false,
           closeOnClick: true,
@@ -155,9 +160,11 @@ const ResetPassword = () => {
       }
     } catch (error) {
       console.error("Reset error:", error);
-      const errorMsg = error.response?.data?.message || "Failed to reset password. Please try again.";
+      const errorMsg =
+        error.response?.data?.message ||
+        "Failed to reset password. Please try again.";
       toast.error(errorMsg, {
-        position: "top-center",
+        position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
@@ -297,7 +304,7 @@ const ResetPassword = () => {
                 ),
               }}
             />
-            
+
             {error && (
               <Typography
                 color="error"
@@ -307,7 +314,7 @@ const ResetPassword = () => {
                 {error}
               </Typography>
             )}
-            
+
             <Button
               type="submit"
               variant="contained"
@@ -330,7 +337,7 @@ const ResetPassword = () => {
             >
               {loading ? "Resetting..." : "Reset Password"}
             </Button>
-            
+
             <Button
               variant="outlined"
               size="small"

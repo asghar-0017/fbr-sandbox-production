@@ -35,7 +35,10 @@ const AppRouter = () => {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/tenant-login" element={<TenantLogin />} />
-              <Route path="/forgot-password" element={<EmailVerification />} />
+              <Route
+                path="/email-verification"
+                element={<EmailVerification />}
+              />
               <Route path="/otp" element={<OTP />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route

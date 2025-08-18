@@ -1,15 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Button,
-  TextField,
-  Paper,
-  Typography,
-  Box,
-  Avatar,
-} from "@mui/material";
-import LockIcon from "@mui/icons-material/Lock";
-import { Email } from "@mui/icons-material";
+import { Button, TextField, Paper, Typography, Box } from "@mui/material";
 import axios from "axios";
 import { API_CONFIG } from "../API/Api";
 import Footer from "../component/Footer";
@@ -27,51 +18,67 @@ const EmailVerification = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(""); // Clear previous errors
+
     try {
-      const response = await axios
-        .post(`${apiKeyLocal}/auth/forgot-password`, { email })
-        .then((res) => {
-          if (res.data.success) {
-            // Show success toast
-            toast.success("Verification code sent successfully! Please check your email.", {
-              position: "top-center",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-            });
-            navigate("/otp");
-            localStorage.setItem("email", email);
-            console.log(res);
-          } else {
-            const errorMsg = res.data.message || "Failed to send verification code";
-            toast.error(errorMsg, {
-              position: "top-center",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-            });
-            setError(errorMsg);
-          }
-        })
-        .catch((err) => {
-          console.error(err);
-          const errorMsg = err.response?.data?.message || "Failed to send verification code";
-          toast.error(errorMsg, {
-            position: "top-center",
+      // Normalize email to lowercase to match backend
+      const normalizedEmail = email.toLowerCase();
+      const response = await axios.post(`${apiKeyLocal}/auth/forgot-password`, {
+        email: normalizedEmail,
+      });
+
+      // Log response for debugging
+      console.log("API Response:", response.data);
+
+      // Check if email exists
+      if (response.data.exists === false) {
+        const errorMsg =
+          response.data.message ||
+          "This email is not registered. Please try again.";
+        toast.error(errorMsg, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        setError(errorMsg);
+        setLoading(false);
+        return;
+      }
+
+      // If exists and successful
+      if (response.data.success) {
+        toast.success(
+          "Verification code sent successfully! Please check your email.",
+          {
+            position: "top-right",
             autoClose: 5000,
             hideProgressBar: false,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
-          });
-          setError(errorMsg);
+          }
+        );
+        navigate("/otp");
+        localStorage.setItem("email", normalizedEmail);
+      } else {
+        const errorMsg =
+          response.data.message || "Failed to send verification code";
+        toast.error(errorMsg, {
+          position: "top-center",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
         });
+        setError(errorMsg);
+      }
     } catch (error) {
-      const errorMsg = `Email verification failed. ${error.message || "Please try again."}`;
+      const errorMsg =
+        error.response?.data?.message || "Failed to send verification code";
       toast.error(errorMsg, {
         position: "top-center",
         autoClose: 5000,
@@ -81,7 +88,7 @@ const EmailVerification = () => {
         draggable: true,
       });
       setError(errorMsg);
-      console.error(error);
+      console.error("Error:", error);
     } finally {
       setLoading(false);
     }
@@ -182,7 +189,7 @@ const EmailVerification = () => {
             >
               {loading ? "Sending..." : "Send Verification Code"}
             </Button>
-            
+
             <Button
               variant="outlined"
               size="small"
@@ -209,7 +216,6 @@ const EmailVerification = () => {
 
       {/* Branding Section */}
       <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 order-1 lg:order-2 bg-white min-h-[50vh] lg:h-full lg:min-h-0">
-        {/* Top Logos */}
         <div className="w-full flex justify-between items-center mb-4 lg:mb-6 max-w-md lg:max-w-lg">
           <img
             className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 object-contain"
@@ -223,10 +229,8 @@ const EmailVerification = () => {
           />
         </div>
 
-        {/* Top Border Line */}
         <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mb-4 lg:mb-6"></div>
 
-        {/* Main Image and Text */}
         <div className="flex flex-col justify-center items-center flex-1 max-w-md lg:max-w-lg">
           <div className="relative w-full flex justify-center mb-4">
             <img
@@ -252,7 +256,6 @@ const EmailVerification = () => {
           </Typography>
         </div>
 
-        {/* Bottom Border Line */}
         <div className="w-full max-w-md lg:max-w-lg border-b-2 border-[#FB5B24] mt-4 lg:mt-6"></div>
       </div>
       <Footer />

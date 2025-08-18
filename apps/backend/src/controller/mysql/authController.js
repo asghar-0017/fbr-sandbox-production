@@ -1,11 +1,11 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { Op } from 'sequelize';
-import AdminUser from '../../model/mysql/AdminUser.js';
-import AdminSession from '../../model/mysql/AdminSession.js';
-import ResetCode from '../../model/mysql/ResetCode.js';
-import generateResetCode from '../../utils/generateResetCode.js';
-import sendResetEmail from '../../utils/sendResetEmail.js';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
+import AdminUser from "../../model/mysql/AdminUser.js";
+import AdminSession from "../../model/mysql/AdminSession.js";
+import ResetCode from "../../model/mysql/ResetCode.js";
+import generateResetCode from "../../utils/generateResetCode.js";
+import sendResetEmail from "../../utils/sendResetEmail.js";
 
 /**
  * Standard API response formatter
@@ -16,7 +16,7 @@ const formatResponse = (success, message, data = null, statusCode = 200) => {
     message,
     data,
     timestamp: new Date().toISOString(),
-    statusCode
+    statusCode,
   };
 };
 
@@ -44,15 +44,15 @@ const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 const checkRateLimit = (email) => {
   const attempts = loginAttempts.get(email) || { count: 0, lastAttempt: 0 };
   const now = Date.now();
-  
+
   if (now - attempts.lastAttempt > LOCKOUT_DURATION) {
     attempts.count = 0;
   }
-  
+
   if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
     return false;
   }
-  
+
   attempts.count++;
   attempts.lastAttempt = now;
   loginAttempts.set(email, attempts);
@@ -74,75 +74,96 @@ export const login = async (req, res) => {
 
     // Input validation
     if (!email || !password) {
-      return res.status(400).json(
-        formatResponse(false, 'Email and password are required', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(false, "Email and password are required", null, 400)
+        );
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json(
-        formatResponse(false, 'Please provide a valid email address', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Please provide a valid email address",
+            null,
+            400
+          )
+        );
     }
 
     // Check rate limiting
     if (!checkRateLimit(email)) {
-      return res.status(429).json(
-        formatResponse(false, 'Too many login attempts. Please try again in 15 minutes.', null, 429)
-      );
+      return res
+        .status(429)
+        .json(
+          formatResponse(
+            false,
+            "Too many login attempts. Please try again in 15 minutes.",
+            null,
+            429
+          )
+        );
     }
 
     // Find admin user
-    const admin = await AdminUser.findOne({ 
-      where: { 
-        email: email 
-      } 
+    const admin = await AdminUser.findOne({
+      where: {
+        email: email,
+      },
     });
 
     if (!admin) {
-      return res.status(401).json(
-        formatResponse(false, 'Invalid email or password', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid email or password", null, 401));
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      return res.status(401).json(
-        formatResponse(false, 'Invalid email or password', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid email or password", null, 401));
     }
 
     // Check if account is verified
     if (!admin.is_verify) {
-      return res.status(401).json(
-        formatResponse(false, 'Account not verified. Please verify your email first.', null, 401)
-      );
+      return res
+        .status(401)
+        .json(
+          formatResponse(
+            false,
+            "Account not verified. Please verify your email first.",
+            null,
+            401
+          )
+        );
     }
 
     // Check for existing sessions and limit them
-     await AdminSession.findAll({
-      where: { admin_id: admin.id }
+    await AdminSession.findAll({
+      where: { admin_id: admin.id },
     });
-
-   
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: admin.id, 
-        email: admin.email, 
+      {
+        id: admin.id,
+        email: admin.email,
         role: admin.role,
-        iat: Math.floor(Date.now() / 1000)
+        iat: Math.floor(Date.now() / 1000),
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     // Create new session
-    await AdminSession.create({ 
-      admin_id: admin.id, 
-      token 
+    await AdminSession.create({
+      admin_id: admin.id,
+      token,
     });
 
     // Reset rate limit on successful login
@@ -156,22 +177,21 @@ export const login = async (req, res) => {
       is_verify: admin.is_verify,
       photo_profile: admin.photo_profile,
       created_at: admin.created_at,
-      updated_at: admin.updated_at
+      updated_at: admin.updated_at,
     };
 
     return res.status(200).json(
-      formatResponse(true, 'Login successful', {
+      formatResponse(true, "Login successful", {
         token,
         user: userData,
-        expiresIn: '24h'
+        expiresIn: "24h",
       })
     );
-
   } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Login error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -181,34 +201,33 @@ export const login = async (req, res) => {
  */
 export const logout = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
-      return res.status(401).json(
-        formatResponse(false, 'No token provided', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "No token provided", null, 401));
     }
 
     // Remove session from database
-    const deletedCount = await AdminSession.destroy({ 
-      where: { token } 
+    const deletedCount = await AdminSession.destroy({
+      where: { token },
     });
 
     if (deletedCount === 0) {
-      return res.status(401).json(
-        formatResponse(false, 'Invalid or expired token', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid or expired token", null, 401));
     }
 
-    return res.status(200).json(
-      formatResponse(true, 'Logged out successfully')
-    );
-
+    return res
+      .status(200)
+      .json(formatResponse(true, "Logged out successfully"));
   } catch (error) {
-    console.error('Logout error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Logout error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -218,63 +237,61 @@ export const logout = async (req, res) => {
  */
 export const verifyToken = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
-      return res.status(401).json(
-        formatResponse(false, 'No token provided', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "No token provided", null, 401));
     }
 
     // Check if session exists
-    const session = await AdminSession.findOne({ 
-      where: { token } 
+    const session = await AdminSession.findOne({
+      where: { token },
     });
 
     if (!session) {
-      return res.status(401).json(
-        formatResponse(false, 'Invalid or expired token', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid or expired token", null, 401));
     }
 
     // Verify JWT token
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Get user data
       const admin = await AdminUser.findByPk(decoded.id);
       if (!admin) {
-        return res.status(401).json(
-          formatResponse(false, 'User not found', null, 401)
-        );
+        return res
+          .status(401)
+          .json(formatResponse(false, "User not found", null, 401));
       }
 
       return res.status(200).json(
-        formatResponse(true, 'Token is valid', {
+        formatResponse(true, "Token is valid", {
           isValid: true,
           user: {
             id: admin.id,
             email: admin.email,
             role: admin.role,
-            is_verify: admin.is_verify
-          }
+            is_verify: admin.is_verify,
+          },
         })
       );
-
     } catch (jwtError) {
       // Remove invalid session
       await AdminSession.destroy({ where: { token } });
-      
-      return res.status(401).json(
-        formatResponse(false, 'Invalid or expired token', null, 401)
-      );
-    }
 
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid or expired token", null, 401));
+    }
   } catch (error) {
-    console.error('Token verification error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Token verification error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -285,26 +302,27 @@ export const verifyToken = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const adminId = req.user.id;
-    
+
     const admin = await AdminUser.findByPk(adminId, {
-      attributes: { exclude: ['password', 'verify_token', 'verify_code'] }
+      attributes: { exclude: ["password", "verify_token", "verify_code"] },
     });
 
     if (!admin) {
-      return res.status(404).json(
-        formatResponse(false, 'User not found', null, 404)
-      );
+      return res
+        .status(404)
+        .json(formatResponse(false, "User not found", null, 404));
     }
 
-    return res.status(200).json(
-      formatResponse(true, 'Profile retrieved successfully', { user: admin })
-    );
-
+    return res
+      .status(200)
+      .json(
+        formatResponse(true, "Profile retrieved successfully", { user: admin })
+      );
   } catch (error) {
-    console.error('Get profile error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Get profile error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -319,31 +337,38 @@ export const updateProfile = async (req, res) => {
 
     // Input validation
     if (email && !validateEmail(email)) {
-      return res.status(400).json(
-        formatResponse(false, 'Please provide a valid email address', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Please provide a valid email address",
+            null,
+            400
+          )
+        );
     }
 
     const admin = await AdminUser.findByPk(adminId);
     if (!admin) {
-      return res.status(404).json(
-        formatResponse(false, 'User not found', null, 404)
-      );
+      return res
+        .status(404)
+        .json(formatResponse(false, "User not found", null, 404));
     }
 
     // Check if email is already taken by another user
     if (email && email !== admin.email) {
-      const existingUser = await AdminUser.findOne({ 
-        where: { 
+      const existingUser = await AdminUser.findOne({
+        where: {
           email: email.toLowerCase().trim(),
-          id: { [Op.ne]: adminId }
-        } 
+          id: { [Op.ne]: adminId },
+        },
       });
 
       if (existingUser) {
-        return res.status(400).json(
-          formatResponse(false, 'Email is already taken', null, 400)
-        );
+        return res
+          .status(400)
+          .json(formatResponse(false, "Email is already taken", null, 400));
       }
     }
 
@@ -356,18 +381,21 @@ export const updateProfile = async (req, res) => {
 
     // Return updated profile without sensitive data
     const updatedAdmin = await AdminUser.findByPk(adminId, {
-      attributes: { exclude: ['password', 'verify_token', 'verify_code'] }
+      attributes: { exclude: ["password", "verify_token", "verify_code"] },
     });
 
-    return res.status(200).json(
-      formatResponse(true, 'Profile updated successfully', { user: updatedAdmin })
-    );
-
+    return res
+      .status(200)
+      .json(
+        formatResponse(true, "Profile updated successfully", {
+          user: updatedAdmin,
+        })
+      );
   } catch (error) {
-    console.error('Update profile error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Update profile error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -382,30 +410,49 @@ export const changePassword = async (req, res) => {
 
     // Input validation
     if (!currentPassword || !newPassword) {
-      return res.status(400).json(
-        formatResponse(false, 'Current password and new password are required', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Current password and new password are required",
+            null,
+            400
+          )
+        );
     }
 
     if (!validatePassword(newPassword)) {
-      return res.status(400).json(
-        formatResponse(false, 'New password must be at least 8 characters long and contain uppercase, lowercase, and number', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "New password must be at least 8 characters long and contain uppercase, lowercase, and number",
+            null,
+            400
+          )
+        );
     }
 
     const admin = await AdminUser.findByPk(adminId);
     if (!admin) {
-      return res.status(404).json(
-        formatResponse(false, 'User not found', null, 404)
-      );
+      return res
+        .status(404)
+        .json(formatResponse(false, "User not found", null, 404));
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      admin.password
+    );
     if (!isCurrentPasswordValid) {
-      return res.status(401).json(
-        formatResponse(false, 'Current password is incorrect', null, 401)
-      );
+      return res
+        .status(401)
+        .json(
+          formatResponse(false, "Current password is incorrect", null, 401)
+        );
     }
 
     // Hash new password
@@ -417,15 +464,19 @@ export const changePassword = async (req, res) => {
     // Invalidate all existing sessions
     await AdminSession.destroy({ where: { admin_id: adminId } });
 
-    return res.status(200).json(
-      formatResponse(true, 'Password changed successfully. Please login again.')
-    );
-
+    return res
+      .status(200)
+      .json(
+        formatResponse(
+          true,
+          "Password changed successfully. Please login again."
+        )
+      );
   } catch (error) {
-    console.error('Change password error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Change password error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -439,27 +490,48 @@ export const forgotPassword = async (req, res) => {
 
     // Input validation
     if (!email) {
-      return res.status(400).json(
-        formatResponse(false, 'Email is required', null, 400)
-      );
+      return res
+        .status(400)
+        .json(formatResponse(false, "Email is required", null, 400));
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json(
-        formatResponse(false, 'Please provide a valid email address', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Please provide a valid email address",
+            null,
+            400
+          )
+        );
+    }
+    const checkEmail = await AdminUser.findOne({
+      where: { email: email.toLowerCase().trim() },
+    });
+    if (!checkEmail) {
+      return res.status(200).json({
+        exists: false,
+        message: "This email is not registered. Please try again.",
+      });
     }
 
     // Find user
-    const user = await AdminUser.findOne({ 
-      where: { email: email.toLowerCase().trim() } 
+    const user = await AdminUser.findOne({
+      where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
       // Don't reveal if email exists or not for security
-      return res.status(200).json(
-        formatResponse(true, 'If the email exists, a reset code has been sent.')
-      );
+      return res
+        .status(200)
+        .json(
+          formatResponse(
+            true,
+            "If the email exists, a reset code has been sent."
+          )
+        );
     }
 
     // Generate reset code
@@ -467,32 +539,40 @@ export const forgotPassword = async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Save or update reset code
-    await ResetCode.upsert({ 
-      email: email.toLowerCase().trim(), 
-      code, 
+    await ResetCode.upsert({
+      email: email.toLowerCase().trim(),
+      code,
       expires_at: expiresAt,
-      is_used: false
+      is_used: false,
     });
 
     // Send email
     try {
       await sendResetEmail(email, code);
     } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      return res.status(500).json(
-        formatResponse(false, 'Failed to send reset email. Please try again later.', null, 500)
-      );
+      console.error("Email sending failed:", emailError);
+      return res
+        .status(500)
+        .json(
+          formatResponse(
+            false,
+            "Failed to send reset email. Please try again later.",
+            null,
+            500
+          )
+        );
     }
 
-    return res.status(200).json(
-      formatResponse(true, 'If the email exists, a reset code has been sent.')
-    );
-
+    return res
+      .status(200)
+      .json(
+        formatResponse(true, "If the email exists, a reset code has been sent.")
+      );
   } catch (error) {
-    console.error('Forgot password error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Forgot password error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -506,49 +586,57 @@ export const verifyResetCode = async (req, res) => {
 
     // Input validation
     if (!email || !code) {
-      return res.status(400).json(
-        formatResponse(false, 'Email and reset code are required', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(false, "Email and reset code are required", null, 400)
+        );
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json(
-        formatResponse(false, 'Please provide a valid email address', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Please provide a valid email address",
+            null,
+            400
+          )
+        );
     }
 
     // Find reset code
-    const resetEntry = await ResetCode.findOne({ 
-      where: { 
+    const resetEntry = await ResetCode.findOne({
+      where: {
         email: email.toLowerCase().trim(),
         code,
-        is_used: false
-      } 
+        is_used: false,
+      },
     });
 
     if (!resetEntry) {
-      return res.status(400).json(
-        formatResponse(false, 'Invalid reset code', null, 400)
-      );
+      return res
+        .status(400)
+        .json(formatResponse(false, "Invalid reset code", null, 400));
     }
 
     // Check if code is expired
     if (new Date() > resetEntry.expires_at) {
       await resetEntry.update({ is_used: true });
-      return res.status(400).json(
-        formatResponse(false, 'Reset code has expired', null, 400)
-      );
+      return res
+        .status(400)
+        .json(formatResponse(false, "Reset code has expired", null, 400));
     }
 
-    return res.status(200).json(
-      formatResponse(true, 'Reset code verified successfully')
-    );
-
+    return res
+      .status(200)
+      .json(formatResponse(true, "Reset code verified successfully"));
   } catch (error) {
-    console.error('Verify reset code error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Verify reset code error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -562,55 +650,76 @@ export const resetPassword = async (req, res) => {
 
     // Input validation
     if (!email || !code || !newPassword) {
-      return res.status(400).json(
-        formatResponse(false, 'Email, reset code, and new password are required', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Email, reset code, and new password are required",
+            null,
+            400
+          )
+        );
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json(
-        formatResponse(false, 'Please provide a valid email address', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Please provide a valid email address",
+            null,
+            400
+          )
+        );
     }
 
     if (!validatePassword(newPassword)) {
-      return res.status(400).json(
-        formatResponse(false, 'Password must be at least 8 characters long and contain uppercase, lowercase, and number', null, 400)
-      );
+      return res
+        .status(400)
+        .json(
+          formatResponse(
+            false,
+            "Password must be at least 8 characters long and contain uppercase, lowercase, and number",
+            null,
+            400
+          )
+        );
     }
 
     // Find and verify reset code
-    const resetEntry = await ResetCode.findOne({ 
-      where: { 
+    const resetEntry = await ResetCode.findOne({
+      where: {
         email: email.toLowerCase().trim(),
         code,
-        is_used: false
-      } 
+        is_used: false,
+      },
     });
 
     if (!resetEntry) {
-      return res.status(400).json(
-        formatResponse(false, 'Invalid reset code', null, 400)
-      );
+      return res
+        .status(400)
+        .json(formatResponse(false, "Invalid reset code", null, 400));
     }
 
     // Check if code is expired
     if (new Date() > resetEntry.expires_at) {
       await resetEntry.update({ is_used: true });
-      return res.status(400).json(
-        formatResponse(false, 'Reset code has expired', null, 400)
-      );
+      return res
+        .status(400)
+        .json(formatResponse(false, "Reset code has expired", null, 400));
     }
 
     // Find user
-    const user = await AdminUser.findOne({ 
-      where: { email: email.toLowerCase().trim() } 
+    const user = await AdminUser.findOne({
+      where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
-      return res.status(404).json(
-        formatResponse(false, 'User not found', null, 404)
-      );
+      return res
+        .status(404)
+        .json(formatResponse(false, "User not found", null, 404));
     }
 
     // Hash new password
@@ -625,15 +734,19 @@ export const resetPassword = async (req, res) => {
     // Invalidate all existing sessions
     await AdminSession.destroy({ where: { admin_id: user.id } });
 
-    return res.status(200).json(
-      formatResponse(true, 'Password reset successfully. Please login with your new password.')
-    );
-
+    return res
+      .status(200)
+      .json(
+        formatResponse(
+          true,
+          "Password reset successfully. Please login with your new password."
+        )
+      );
   } catch (error) {
-    console.error('Reset password error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Reset password error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };
 
@@ -643,12 +756,12 @@ export const resetPassword = async (req, res) => {
  */
 export const refreshToken = async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
-      return res.status(401).json(
-        formatResponse(false, 'No token provided', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "No token provided", null, 401));
     }
 
     // Verify current token
@@ -656,56 +769,55 @@ export const refreshToken = async (req, res) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (jwtError) {
-      return res.status(401).json(
-        formatResponse(false, 'Invalid token', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Invalid token", null, 401));
     }
 
     // Check if session exists
-    const session = await AdminSession.findOne({ 
-      where: { token } 
+    const session = await AdminSession.findOne({
+      where: { token },
     });
 
     if (!session) {
-      return res.status(401).json(
-        formatResponse(false, 'Session not found', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "Session not found", null, 401));
     }
 
     // Get user
     const admin = await AdminUser.findByPk(decoded.id);
     if (!admin) {
-      return res.status(401).json(
-        formatResponse(false, 'User not found', null, 401)
-      );
+      return res
+        .status(401)
+        .json(formatResponse(false, "User not found", null, 401));
     }
 
     // Generate new token
     const newToken = jwt.sign(
-      { 
-        id: admin.id, 
-        email: admin.email, 
+      {
+        id: admin.id,
+        email: admin.email,
         role: admin.role,
-        iat: Math.floor(Date.now() / 1000)
+        iat: Math.floor(Date.now() / 1000),
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     // Update session with new token
     await session.update({ token: newToken });
 
     return res.status(200).json(
-      formatResponse(true, 'Token refreshed successfully', {
+      formatResponse(true, "Token refreshed successfully", {
         token: newToken,
-        expiresIn: '24h'
+        expiresIn: "24h",
       })
     );
-
   } catch (error) {
-    console.error('Refresh token error:', error);
-    return res.status(500).json(
-      formatResponse(false, 'Internal server error', null, 500)
-    );
+    console.error("Refresh token error:", error);
+    return res
+      .status(500)
+      .json(formatResponse(false, "Internal server error", null, 500));
   }
 };

@@ -13,6 +13,7 @@ import { Email } from "@mui/icons-material";
 import axios from "axios";
 import { API_CONFIG } from "../API/Api";
 import Footer from "../component/Footer";
+import { toast } from "react-toastify";
 
 const { apiKeyLocal } = API_CONFIG;
 
@@ -28,19 +29,58 @@ const EmailVerification = () => {
     setLoading(true);
     try {
       const response = await axios
-        .post(`${apiKeyLocal}/forget-password`, { email })
+        .post(`${apiKeyLocal}/auth/forgot-password`, { email })
         .then((res) => {
-          navigate("/otp");
-          localStorage.setItem("email", email);
-          console.log(res);
+          if (res.data.success) {
+            // Show success toast
+            toast.success("Verification code sent successfully! Please check your email.", {
+              position: "top-center",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+            navigate("/otp");
+            localStorage.setItem("email", email);
+            console.log(res);
+          } else {
+            const errorMsg = res.data.message || "Failed to send verification code";
+            toast.error(errorMsg, {
+              position: "top-center",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+            setError(errorMsg);
+          }
         })
         .catch((err) => {
           console.error(err);
+          const errorMsg = err.response?.data?.message || "Failed to send verification code";
+          toast.error(errorMsg, {
+            position: "top-center",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+          setError(errorMsg);
         });
     } catch (error) {
-      setError(
-        `Email verification failed. ${error.message || "Please try again."}`
-      );
+      const errorMsg = `Email verification failed. ${error.message || "Please try again."}`;
+      toast.error(errorMsg, {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      setError(errorMsg);
       console.error(error);
     } finally {
       setLoading(false);
@@ -141,6 +181,27 @@ const EmailVerification = () => {
               }}
             >
               {loading ? "Sending..." : "Send Verification Code"}
+            </Button>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              fullWidth
+              onClick={() => navigate("/login")}
+              sx={{
+                mt: 2,
+                borderColor: "#2655A2",
+                color: "#2655A2",
+                height: { xs: 36, sm: 40 },
+                borderRadius: 2,
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                "&:hover": {
+                  borderColor: "#1e4082",
+                  backgroundColor: "rgba(38, 85, 162, 0.04)",
+                },
+              }}
+            >
+              Back to Login
             </Button>
           </form>
         </Paper>

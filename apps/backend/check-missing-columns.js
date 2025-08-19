@@ -12,8 +12,9 @@ console.log('🚀 Starting database schema check for all tenants...\n');
 
 // Database Schema Checker Class
 class DatabaseSchemaChecker {
-  constructor() {
+  constructor(isStandalone = false) {
     this.tenantConnections = new Map();
+    this.isStandalone = isStandalone;
   }
 
   // Get all active tenants
@@ -338,6 +339,16 @@ class DatabaseSchemaChecker {
     } finally {
       // Cleanup connections
       await this.cleanup();
+      
+      // Verify master connection is still working after cleanup
+      if (!this.isStandalone) {
+        try {
+          await masterSequelize.authenticate();
+          console.log('✅ Master database connection verified after cleanup');
+        } catch (authError) {
+          console.error('❌ Master database connection lost after cleanup:', authError.message);
+        }
+      }
     }
   }
 
@@ -345,13 +356,38 @@ class DatabaseSchemaChecker {
   async cleanup() {
     console.log('\n🧹 Cleaning up connections...');
     try {
+      // Only close tenant connections, not the master connection when running as part of the app
       for (const [databaseName, sequelize] of this.tenantConnections) {
-        await sequelize.close();
-        console.log(`✅ Closed connection for ${databaseName}`);
+        try {
+          await sequelize.close();
+          console.log(`✅ Closed connection for ${databaseName}`);
+        } catch (closeError) {
+          console.error(`⚠️  Error closing connection for ${databaseName}:`, closeError.message);
+        }
       }
       
-      await masterSequelize.close();
-      console.log('✅ Closed master database connection');
+      // Clear the tenant connections map
+      this.tenantConnections.clear();
+      
+      // Only close master connection if running standalone
+      if (this.isStandalone) {
+        try {
+          await masterSequelize.close();
+          console.log('✅ Closed master database connection');
+        } catch (closeError) {
+          console.error('⚠️  Error closing master connection:', closeError.message);
+        }
+      } else {
+        console.log('ℹ️  Keeping master connection open for main application');
+        
+        // Verify master connection is still working
+        try {
+          await masterSequelize.authenticate();
+          console.log('✅ Master connection verified and working');
+        } catch (authError) {
+          console.error('❌ Master connection verification failed:', authError.message);
+        }
+      }
     } catch (error) {
       console.error('❌ Error during cleanup:', error);
     }
@@ -360,7 +396,7 @@ class DatabaseSchemaChecker {
 
 // Standalone function for direct execution
 async function checkAndCreateMissingColumns() {
-  const checker = new DatabaseSchemaChecker();
+  const checker = new DatabaseSchemaChecker(true); // true = standalone mode
   await checker.checkAllTenants();
 }
 

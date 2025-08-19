@@ -9,8 +9,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 class DatabaseSchemaChecker {
-  constructor() {
+  constructor(standalone = false) {
     this.tenantConnections = new Map();
+    this.standalone = standalone;
   }
 
   // Get all active tenants
@@ -270,8 +271,13 @@ class DatabaseSchemaChecker {
       }
       this.tenantConnections.clear();
       
-      await masterSequelize.close();
-      console.log('✅ Closed master database connection');
+      // Only close master connection if running standalone
+      if (this.standalone) {
+        await masterSequelize.close();
+        console.log('✅ Closed master database connection');
+      } else {
+        console.log('ℹ️  Keeping master connection open for main application');
+      }
     } catch (error) {
       console.error('❌ Error during cleanup:', error);
     }
@@ -280,7 +286,7 @@ class DatabaseSchemaChecker {
 
 // Run the script
 async function main() {
-  const checker = new DatabaseSchemaChecker();
+  const checker = new DatabaseSchemaChecker(true); // true = standalone mode
   
   try {
     await checker.checkAllTenants();
@@ -293,14 +299,14 @@ async function main() {
 // Handle process termination
 process.on('SIGINT', async () => {
   console.log('\n⚠️  Received SIGINT, cleaning up...');
-  const checker = new DatabaseSchemaChecker();
+  const checker = new DatabaseSchemaChecker(true); // true = standalone mode
   await checker.cleanup();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n⚠️  Received SIGTERM, cleaning up...');
-  const checker = new DatabaseSchemaChecker();
+  const checker = new DatabaseSchemaChecker(true); // true = standalone mode
   await checker.cleanup();
   process.exit(0);
 });

@@ -4,7 +4,7 @@ console.log('🧪 Testing Database Schema Checker...\n');
 
 async function testSchemaChecker() {
   try {
-    const checker = new DatabaseSchemaChecker();
+    const checker = new DatabaseSchemaChecker(true); // true = standalone mode
     console.log('✅ Schema checker instance created successfully');
     
     // Test the getAllTenants method

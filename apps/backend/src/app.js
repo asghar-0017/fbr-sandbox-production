@@ -15,6 +15,9 @@ import mysqlConnector from "./dbConnector/mysqlConnector.js";
 // Import schema checker for automatic database maintenance
 import DatabaseSchemaChecker from "../check-missing-columns.js";
 
+// Import MySQL config for connection testing
+import { testMasterConnection } from "./config/mysql.js";
+
 // Import new MySQL routes
 import authRoutes from "./routes/authRoutes.js";
 import tenantAuthRoutes from "./routes/tenantAuthRoutes.js";
@@ -94,7 +97,7 @@ app.use("/api", publicInvoiceRoutes);
 app.post("/api/admin/check-schema", async (req, res) => {
   try {
     console.log("🔍 Manual schema check triggered via API...");
-    const checker = new DatabaseSchemaChecker();
+    const checker = new DatabaseSchemaChecker(false); // false = not standalone, part of main app
     await checker.checkAllTenants();
     res.json({ 
       success: true, 
@@ -126,22 +129,42 @@ const startServer = async () => {
     await mysqlConnector({}, logger);
     console.log("✅ Connected to MySQL multi-tenant database system");
 
-    // Auto-run database schema check on startup
-    console.log("🔍 Running automatic database schema check...");
-    try {
-      const checker = new DatabaseSchemaChecker();
-      await checker.checkAllTenants();
-      console.log("✅ Database schema check completed successfully!");
-    } catch (schemaError) {
-      console.log("⚠️  Schema check had issues (continuing server startup):", schemaError.message);
-    }
-
+    // Start the server first
     const port = process.env.PORT || 5150;
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log("🚀 Server is running on port", port);
       console.log("📋 MySQL Multi-Tenant System Ready!");
       console.log("🔗 API Endpoints:");
     });
+
+    // Run database schema check in the background (non-blocking)
+    console.log("🔍 Running automatic database schema check in background...");
+    setImmediate(async () => {
+      try {
+        // Verify master connection is still working before running schema check
+        await testMasterConnection();
+        
+        const checker = new DatabaseSchemaChecker(false); // false = not standalone, part of main app
+        await checker.checkAllTenants();
+        console.log("✅ Database schema check completed successfully!");
+        
+        // Verify master connection is still working after schema check
+        await testMasterConnection();
+        console.log("✅ Master database connection verified after schema check");
+        
+      } catch (schemaError) {
+        console.log("⚠️  Schema check had issues (server continues running):", schemaError.message);
+        
+        // Try to recover the master connection if it was closed
+        try {
+          await testMasterConnection();
+          console.log("✅ Master database connection recovered after schema check issues");
+        } catch (recoveryError) {
+          console.log("❌ Failed to recover master database connection:", recoveryError.message);
+        }
+      }
+    });
+
   } catch (error) {
     console.log("❌ Error starting server", error);
     process.exit(1);

@@ -12,6 +12,9 @@ import ejs from "ejs";
 // Import MySQL connector instead of MongoDB
 import mysqlConnector from "./dbConnector/mysqlConnector.js";
 
+// Import schema checker for automatic database maintenance
+import DatabaseSchemaChecker from "../check-missing-columns.js";
+
 // Import new MySQL routes
 import authRoutes from "./routes/authRoutes.js";
 import tenantAuthRoutes from "./routes/tenantAuthRoutes.js";
@@ -87,6 +90,26 @@ app.use("/api", hsCodeRoutes);
 // Public Invoice Routes
 app.use("/api", publicInvoiceRoutes);
 
+// Manual schema check endpoint
+app.post("/api/admin/check-schema", async (req, res) => {
+  try {
+    console.log("🔍 Manual schema check triggered via API...");
+    const checker = new DatabaseSchemaChecker();
+    await checker.checkAllTenants();
+    res.json({ 
+      success: true, 
+      message: "Database schema check completed successfully" 
+    });
+  } catch (error) {
+    console.error("❌ Manual schema check failed:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Schema check failed", 
+      error: error.message 
+    });
+  }
+});
+
 // Catch-all route for SPA - must be last
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
@@ -102,6 +125,16 @@ const startServer = async () => {
     // Initialize MySQL instead of MongoDB
     await mysqlConnector({}, logger);
     console.log("✅ Connected to MySQL multi-tenant database system");
+
+    // Auto-run database schema check on startup
+    console.log("🔍 Running automatic database schema check...");
+    try {
+      const checker = new DatabaseSchemaChecker();
+      await checker.checkAllTenants();
+      console.log("✅ Database schema check completed successfully!");
+    } catch (schemaError) {
+      console.log("⚠️  Schema check had issues (continuing server startup):", schemaError.message);
+    }
 
     const port = process.env.PORT || 5150;
     app.listen(port, () => {

@@ -231,7 +231,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             Sales Tax Invoice
           </Typography>
           <Box>
-            {!invoice?.invoiceNumber?.startsWith("SAVED_") && (
+            {invoice?.status === "posted" && (
               <IconButton
                 onClick={onPrint}
                 sx={{ color: "primary.contrastText", mr: 1 }}
@@ -330,8 +330,14 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
               <Typography variant="body2" align="right">
                 {invoice.sellerBusinessName}
               </Typography>
-              <Typography variant="body2" align="right">
+              <Typography
+                sx={{ maxWidth: "250px" }}
+                variant="body2"
+                align="right"
+              >
                 {invoice.sellerAddress}
+                <br />
+                {invoice.sellerCity}
               </Typography>
               <Typography variant="body2" align="right">
                 NTN: {invoice.sellerNTNCNIC}
@@ -367,6 +373,18 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                     }}
                   >
                     HS Code
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      bgcolor: "#2c7c93",
+                      color: "white",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      fontSize: "11px",
+                      p: 1,
+                    }}
+                  >
+                    Product Description
                   </TableCell>
                   <TableCell
                     sx={{
@@ -536,6 +554,16 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                       }}
                     >
                       {item.hsCode}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        border: "1px solid #157492",
+                        textAlign: "center",
+                        fontSize: "11px",
+                        p: 1,
+                      }}
+                    >
+                      {item.productDescription || "N/A"}
                     </TableCell>
                     <TableCell
                       sx={{

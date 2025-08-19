@@ -45,7 +45,7 @@
     td {
       border: 1px solid #157492;
       padding: 6px 8px;
-      font-size: 11px;
+      font-size: 8px;
       text-align: center;
     }
 
@@ -164,13 +164,14 @@
       <p>TYPE: <%= invoice.buyerRegistrationType %>
       </p>
     </div>
-    <div class="seller-info">
+    <div class="seller-info" style="text-align: right;">
       <p><strong>Seller:</strong></p>
       <p>
         <%= invoice.sellerBusinessName %>
       </p>
-      <p>
-        <%= invoice.sellerAddress %>
+      <p style="max-width: 250px; margin-left: auto;">
+        <%= invoice.sellerAddress %><br/>
+        <%= invoice.sellerCity %>
       </p>
       <p>NTN: <%= invoice.sellerNTNCNIC %>
       </p>
@@ -182,6 +183,7 @@
       <tr>
         <th>SR No.</th>
         <th>HS Code</th>
+        <th>Product Description</th>
         <th>Quantity</th>
         <th>Unit Price</th>
         <th>Amount</th>
@@ -204,6 +206,9 @@
           </td>
           <td>
             <%= item.hsCode %>
+          </td>
+          <td>
+            <%= item.productDescription || 'N/A' %>
           </td>
           <td>
             <%= item.quantity %>

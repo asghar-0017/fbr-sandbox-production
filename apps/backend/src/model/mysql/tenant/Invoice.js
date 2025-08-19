@@ -38,6 +38,10 @@ export const createInvoiceModel = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      sellerCity: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
       buyerNTNCNIC: {
         type: DataTypes.STRING(50),
         allowNull: true,

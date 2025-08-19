@@ -53,9 +53,9 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row lg:h-screen">
+    <div className="login-container min-h-screen w-full flex flex-col lg:flex-row lg:h-screen" style={{ width: '100vw', maxWidth: '100vw' }}>
       {/* Login Form Section */}
-      <div className="flex-1 bg-[#EDEDED] flex justify-center items-center p-4 lg:p-6 order-2 lg:order-1">
+      <div className="flex-1 bg-[#EDEDED] flex justify-center items-center p-4 lg:p-6 order-2 lg:order-1 min-w-0" style={{ flex: '1 1 50%', minWidth: 0 }}>
         <Paper
           elevation={6}
           sx={{
@@ -209,7 +209,7 @@ const Login = ({ onLogin }) => {
       </div>
 
       {/* Branding Section */}
-      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 order-1 lg:order-2 bg-white min-h-[50vh] lg:h-full lg:min-h-0">
+      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 order-1 lg:order-2 bg-white min-h-[50vh] lg:h-full lg:min-h-0 w-full min-w-0" style={{ flex: '1 1 50%', minWidth: 0 }}>
         {/* Top Logos */}
         <div className="w-full flex justify-between items-center mb-4 lg:mb-6 max-w-md lg:max-w-lg">
           <img

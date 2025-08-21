@@ -342,29 +342,29 @@ export default function BasicTable() {
   };
 
   // Handle invoice upload
-  // const handleInvoiceUpload = async (invoicesData) => {
-  //   try {
-  //     if (!selectedTenant) {
-  //       throw new Error("No Company selected");
-  //     }
+  const handleInvoiceUpload = async (invoicesData) => {
+    try {
+      if (!selectedTenant) {
+        throw new Error("No Company selected");
+      }
 
-  //     const response = await api.post(
-  //       `/tenant/${selectedTenant.tenant_id}/invoices/bulk`,
-  //       { invoices: invoicesData }
-  //     );
+      const response = await api.post(
+        `/tenant/${selectedTenant.tenant_id}/invoices/bulk`,
+        { invoices: invoicesData }
+      );
 
-  //     if (response.data.success) {
-  //       // Refresh the invoice list after successful upload
-  //       getMyInvoices();
-  //       return response;
-  //     } else {
-  //       throw new Error(response.data.message || "Upload failed");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error uploading invoices:", error);
-  //     throw error;
-  //   }
-  // };
+      if (response.data.success) {
+        // Refresh the invoice list after successful upload
+        getMyInvoices();
+        return response;
+      } else {
+        throw new Error(response.data.message || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Error uploading invoices:", error);
+      throw error;
+    }
+  };
 
   // Since we're using server-side pagination, we don't need client-side filtering
   // The server handles all filtering and pagination
@@ -499,7 +499,7 @@ export default function BasicTable() {
             >
               Your Invoices
             </Typography>
-            {/* <Button
+            <Button
               variant="contained"
               startIcon={<UploadIcon />}
               onClick={() => setUploadModalOpen(true)}
@@ -509,10 +509,15 @@ export default function BasicTable() {
                 fontWeight: 600,
                 px: 3,
                 py: 1,
+                backgroundColor: "#1976d2",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "#1565c0",
+                },
               }}
             >
-              Upload Invoices
-            </Button> */}
+              Upload Invoice
+            </Button>
           </Box>
           {/* Search and Filter Controls */}
           <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
@@ -571,6 +576,7 @@ export default function BasicTable() {
             >
               <MenuItem value="All">All Status</MenuItem>
               <MenuItem value="draft">Draft</MenuItem>
+              <MenuItem value="saved">Saved</MenuItem>
               <MenuItem value="posted">Posted</MenuItem>
             </TextField>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -822,29 +828,28 @@ export default function BasicTable() {
                               gap: 1,
                             }}
                           >
-                            {row.status === "posted" && (
-                              <Tooltip title="Print Invoice">
-                                <Button
-                                  variant="outlined"
-                                  color="success"
-                                  size="small"
-                                  onClick={() => handleButtonClick(row)}
-                                  sx={{
-                                    minWidth: "32px",
-                                    width: "32px",
-                                    height: "32px",
-                                    p: 0,
-                                    "&:hover": {
-                                      backgroundColor: "success.main",
-                                      color: "success.contrastText",
-                                      borderColor: "success.main",
-                                    },
-                                  }}
-                                >
-                                  <PrintIcon fontSize="small" />
-                                </Button>
-                              </Tooltip>
-                            )}
+                            {/* Print button for all invoice statuses */}
+                            <Tooltip title={`Print ${row.status === "posted" ? "Invoice" : row.status === "draft" ? "Draft Invoice" : "Saved Invoice"}`}>
+                              <Button
+                                variant="outlined"
+                                color={row.status === "posted" ? "success" : "info"}
+                                size="small"
+                                onClick={() => handleButtonClick(row)}
+                                sx={{
+                                  minWidth: "32px",
+                                  width: "32px",
+                                  height: "32px",
+                                  p: 0,
+                                  "&:hover": {
+                                    backgroundColor: row.status === "posted" ? "success.main" : "info.main",
+                                    color: row.status === "posted" ? "success.contrastText" : "info.contrastText",
+                                    borderColor: row.status === "posted" ? "success.main" : "info.main",
+                                  },
+                                }}
+                              >
+                                <PrintIcon fontSize="small" />
+                              </Button>
+                            </Tooltip>
                             <Tooltip title="View Invoice Details">
                               <Button
                                 variant="outlined"
@@ -866,9 +871,9 @@ export default function BasicTable() {
                                 <VisibilityIcon fontSize="small" />
                               </Button>
                             </Tooltip>
-                            {row.status === "draft" && (
+                            {(row.status === "draft" || row.status === "saved") && (
                               <>
-                                <Tooltip title={`Edit Draft Invoice`}>
+                                <Tooltip title={`Edit ${row.status === "draft" ? "Draft" : "Saved"} Invoice`}>
                                   <Button
                                     variant="outlined"
                                     color="warning"
@@ -959,13 +964,13 @@ export default function BasicTable() {
             }}
           />
 
-          {/* Invoice Uploader Modal
+          {/* Invoice Uploader Modal */}
           <InvoiceUploader
             isOpen={uploadModalOpen}
             onClose={() => setUploadModalOpen(false)}
             onUpload={handleInvoiceUpload}
             selectedTenant={selectedTenant}
-          /> */}
+          />
         </Box>
       )}
     </>

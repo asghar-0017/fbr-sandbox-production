@@ -85,8 +85,10 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
     0
   );
 
-  // Convert number to words function (Western Numbering System)
+  // Convert number to words function with paisa support
   const convertToWords = (num) => {
+    if (!num || isNaN(num)) return "Zero";
+    
     const ones = [
       "",
       "One",
@@ -142,52 +144,62 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
         );
     };
 
-    if (num === 0) return "Zero";
-
-    const numStr = Math.floor(num).toString();
-
-    if (numStr.length <= 3) {
-      return convertLessThanOneThousand(parseInt(numStr));
-    } else if (numStr.length <= 6) {
-      // Thousands (1,000 to 999,999)
-      const thousands = parseInt(numStr.slice(0, -3));
-      const remainder = parseInt(numStr.slice(-3));
-      return (
-        convertLessThanOneThousand(thousands) +
-        " Thousand" +
-        (remainder !== 0 ? " " + convertLessThanOneThousand(remainder) : "")
-      );
-    } else if (numStr.length <= 9) {
-      // Millions (1,000,000 to 999,999,999)
-      const millions = parseInt(numStr.slice(0, -6));
-      const remainder = parseInt(numStr.slice(-6));
-      return (
-        convertLessThanOneThousand(millions) +
-        " Million" +
-        (millions !== 1 ? "s" : "") +
-        (remainder !== 0 ? " " + convertToWords(remainder) : "")
-      );
-    } else if (numStr.length <= 12) {
-      // Billions (1,000,000,000 to 999,999,999,999)
-      const billions = parseInt(numStr.slice(0, -9));
-      const remainder = parseInt(numStr.slice(-9));
-      return (
-        convertLessThanOneThousand(billions) +
-        " Billion" +
-        (billions !== 1 ? "s" : "") +
-        (remainder !== 0 ? " " + convertToWords(remainder) : "")
-      );
-    } else {
-      // Trillions and beyond
-      const trillions = parseInt(numStr.slice(0, -12));
-      const remainder = parseInt(numStr.slice(-12));
-      return (
-        convertLessThanOneThousand(trillions) +
-        " Trillion" +
-        (trillions !== 1 ? "s" : "") +
-        (remainder !== 0 ? " " + convertToWords(remainder) : "")
-      );
+    // Handle decimal amounts
+    const rupees = Math.floor(num);
+    const paisa = Math.round((num - rupees) * 100);
+    
+    let result = "";
+    
+    if (rupees === 0 && paisa === 0) return "Zero";
+    
+    if (rupees > 0) {
+      const numStr = rupees.toString();
+      
+      if (numStr.length <= 3) {
+        result = convertLessThanOneThousand(parseInt(numStr));
+      } else if (numStr.length <= 6) {
+        // Thousands (1,000 to 999,999)
+        const thousands = parseInt(numStr.slice(0, -3));
+        const remainder = parseInt(numStr.slice(-3));
+        result = convertLessThanOneThousand(thousands) +
+                " Thousand" +
+                (remainder !== 0 ? " " + convertLessThanOneThousand(remainder) : "");
+      } else if (numStr.length <= 9) {
+        // Millions (1,000,000 to 999,999,999)
+        const millions = parseInt(numStr.slice(0, -6));
+        const remainder = parseInt(numStr.slice(-6));
+        result = convertLessThanOneThousand(millions) +
+                " Million" +
+                (millions !== 1 ? "s" : "") +
+                (remainder !== 0 ? " " + convertToWords(remainder) : "");
+      } else if (numStr.length <= 12) {
+        // Billions (1,000,000,000 to 999,999,999,999)
+        const billions = parseInt(numStr.slice(0, -9));
+        const remainder = parseInt(numStr.slice(-9));
+        result = convertLessThanOneThousand(billions) +
+                " Billion" +
+                (billions !== 1 ? "s" : "") +
+                (remainder !== 0 ? " " + convertToWords(remainder) : "");
+      } else {
+        // Trillions and beyond
+        const trillions = parseInt(numStr.slice(0, -12));
+        const remainder = parseInt(numStr.slice(-12));
+        result = convertLessThanOneThousand(trillions) +
+                " Trillion" +
+                (trillions !== 1 ? "s" : "") +
+                (remainder !== 0 ? " " + convertToWords(remainder) : "");
+      }
+      
+      // Add "Rupees" for the whole number part
+      result += " Rupees";
     }
+    
+    if (paisa > 0) {
+      if (result) result += " and ";
+      result += convertLessThanOneThousand(paisa) + " Paisa";
+    }
+    
+    return result;
   };
 
   return (
@@ -231,15 +243,14 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             Sales Tax Invoice
           </Typography>
           <Box>
-            {invoice?.status === "posted" && (
-              <IconButton
-                onClick={onPrint}
-                sx={{ color: "primary.contrastText", mr: 1 }}
-                title="Print Invoice"
-              >
-                <PrintIcon />
-              </IconButton>
-            )}
+            {/* Print button for all invoice statuses */}
+            <IconButton
+              onClick={onPrint}
+              sx={{ color: "primary.contrastText", mr: 1 }}
+              title={`Print ${invoice?.status === "posted" ? "Invoice" : invoice?.status === "draft" ? "Draft Invoice" : "Saved Invoice"}`}
+            >
+              <PrintIcon />
+            </IconButton>
             <IconButton
               onClick={onClose}
               sx={{ color: "primary.contrastText" }}
@@ -748,7 +759,7 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
                 Sales Tax Withheld: {formatNumberWithCommas(withheld)}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                Grand Total (Incl. All Taxes): RS.{" "}
+                Grand Total (Incl. All Taxes): Rs.{" "}
                 {formatNumberWithCommas(grandTotal)}
               </Typography>
             </Box>
@@ -762,10 +773,16 @@ const InvoiceViewModal = ({ open, onClose, invoice, onPrint }) => {
             <Typography variant="body2" sx={{ fontWeight: "bold" }}>
               Total in words:
               <br />
-              {convertToWords(grandTotal)
-                .toLowerCase()
-                .replace(/^\w/, (c) => c.toUpperCase())}{" "}
-              Rupees Only
+              {(() => {
+                const words = convertToWords(grandTotal);
+                // Preserve capital R in Rupees and capital P in Paisa
+                const displayText = words
+                  .toLowerCase()
+                  .replace(/^\w/, (c) => c.toUpperCase())
+                  .replace(/\brupees\b/g, "Rupees")
+                  .replace(/\bpaisa\b/g, "Paisa");
+                return displayText + " Only";
+              })()}
             </Typography>
           </Box>
 

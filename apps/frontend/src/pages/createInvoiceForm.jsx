@@ -146,6 +146,26 @@ const formatWithCommasWhileTyping = (value) => {
   }
 };
 
+// Format quantity with commas while preserving decimal places
+const formatQuantityWithCommas = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  // Remove commas first to get the raw value
+  const cleanValue = value.toString().replace(/,/g, "");
+  
+  // Handle decimal point cases
+  if (cleanValue.includes(".")) {
+    const [integerPart, decimalPart] = cleanValue.split(".");
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${formattedInteger}.${decimalPart}`;
+  } else {
+    // Format integer part with commas
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+};
+
 export default function CreateInvoice() {
   const { selectedTenant, tokensLoaded, retryTokenFetch } =
     useTenantSelection();
@@ -500,9 +520,46 @@ export default function CreateInvoice() {
           setEditingId(invoiceData.id);
         }
 
+        // Debug: Log the invoice data to see what's available
+        console.log("Loading invoice data for editing:", invoiceData);
+        console.log("Invoice type from data:", invoiceData.invoiceType);
+        console.log("Available invoice types:", invoiceTypes);
+        
+        // Check if we need to wait for invoice types to load
+        if (invoiceTypes.length === 0) {
+          console.log("Invoice types not loaded yet, will retry when they're available");
+        }
+        
+        // Helper function to find invoice type description by ID or description
+        const getInvoiceTypeDescription = (invoiceTypeValue) => {
+          if (!invoiceTypeValue) return "";
+          
+          // If it's already a description, return it
+          if (typeof invoiceTypeValue === 'string') {
+            // Check if it matches any of the available descriptions
+            const matchingType = invoiceTypes.find(type => 
+              type.docDescription === invoiceTypeValue
+            );
+            if (matchingType) return invoiceTypeValue;
+          }
+          
+          // If it's a number/ID, try to find the description
+          if (!isNaN(invoiceTypeValue)) {
+            const matchingType = invoiceTypes.find(type => 
+              type.docTypeId === parseInt(invoiceTypeValue)
+            );
+            if (matchingType) return matchingType.docDescription;
+          }
+          
+          // If no match found, return the original value
+          return invoiceTypeValue;
+        };
+        
         // Convert the invoice data to form format
         const formDataFromInvoice = {
-          invoiceType: invoiceData.invoiceType || "",
+          invoiceType: getInvoiceTypeDescription(invoiceData.invoiceType) || 
+                      getInvoiceTypeDescription(invoiceData.docTypeDescription) || 
+                      getInvoiceTypeDescription(invoiceData.documentType) || "",
           invoiceDate: invoiceData.invoiceDate
             ? dayjs(invoiceData.invoiceDate)
             : dayjs(),
@@ -593,6 +650,10 @@ export default function CreateInvoice() {
         };
 
         setFormData(formDataFromInvoice);
+        
+        // Debug: Log the final form data
+        console.log("Final form data set:", formDataFromInvoice);
+        console.log("Invoice type in form data:", formDataFromInvoice.invoiceType);
 
         // Set the transactionTypeId and other required data for editing
         const scenarioId = invoiceData.scenario_id || invoiceData.scenarioId;
@@ -689,6 +750,59 @@ export default function CreateInvoice() {
       }
     }
   }, [selectedTenant, tokensLoaded]);
+
+  // Retry loading invoice data when invoice types become available
+  React.useEffect(() => {
+    const editInvoiceData = localStorage.getItem("editInvoiceData");
+    if (editInvoiceData && invoiceTypes.length > 0) {
+      try {
+        const invoiceData = JSON.parse(editInvoiceData);
+        console.log("Retrying to load invoice data with invoice types:", invoiceTypes);
+        
+        // Helper function to find invoice type description by ID or description
+        const getInvoiceTypeDescription = (invoiceTypeValue) => {
+          if (!invoiceTypeValue) return "";
+          
+          // If it's already a description, return it
+          if (typeof invoiceTypeValue === 'string') {
+            // Check if it matches any of the available descriptions
+            const matchingType = invoiceTypes.find(type => 
+              type.docDescription === invoiceTypeValue
+            );
+            if (matchingType) return invoiceTypeValue;
+          }
+          
+          // If it's a number/ID, try to find the description
+          if (!isNaN(invoiceTypeValue)) {
+            const matchingType = invoiceTypes.find(type => 
+              type.docTypeId === parseInt(invoiceTypeValue)
+            );
+            if (matchingType) return matchingType.docDescription;
+          }
+          
+          // If no match found, return the original value
+          return invoiceTypeValue;
+        };
+        
+        // Update only the invoice type if it was empty before
+        setFormData((prev) => {
+          if (!prev.invoiceType && invoiceData.invoiceType) {
+            const resolvedInvoiceType = getInvoiceTypeDescription(invoiceData.invoiceType) || 
+                                       getInvoiceTypeDescription(invoiceData.docTypeDescription) || 
+                                       getInvoiceTypeDescription(invoiceData.documentType) || "";
+            console.log("Updating invoice type to:", resolvedInvoiceType);
+            return {
+              ...prev,
+              invoiceType: resolvedInvoiceType
+            };
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.error("Error retrying invoice data load:", error);
+      }
+    }
+  }, [invoiceTypes]);
 
   // Handle setting buyer ID when editing and buyers are loaded
   useEffect(() => {
@@ -1725,7 +1839,7 @@ export default function CreateInvoice() {
               fixedNotifiedValueOrRetailPrice: Number(
                 Number(retailPrice).toFixed(2)
               ),
-              quantity: rest.quantity === "" ? 0 : parseInt(rest.quantity, 10),
+              quantity: rest.quantity === "" ? 0 : parseFloat(rest.quantity),
               unitPrice: Number(Number(rest.unitPrice || 0).toFixed(2)),
               valueSalesExcludingST: Number(
                 Number(rest.valueSalesExcludingST || 0).toFixed(2)
@@ -1978,7 +2092,7 @@ export default function CreateInvoice() {
               fixedNotifiedValueOrRetailPrice: Number(
                 Number(retailPrice).toFixed(2)
               ),
-              quantity: rest.quantity === "" ? 0 : parseInt(rest.quantity, 10),
+              quantity: rest.quantity === "" ? 0 : parseFloat(rest.quantity),
               unitPrice: Number(Number(rest.unitPrice || 0).toFixed(2)),
               valueSalesExcludingST: Number(
                 Number(rest.valueSalesExcludingST || 0).toFixed(2)
@@ -2348,7 +2462,7 @@ export default function CreateInvoice() {
             fixedNotifiedValueOrRetailPrice: Number(
               Number(retailPrice).toFixed(2)
             ), // send as required by FBR
-            quantity: rest.quantity === "" ? 0 : parseInt(rest.quantity, 10),
+            quantity: rest.quantity === "" ? 0 : parseFloat(rest.quantity),
             unitPrice: Number(Number(rest.unitPrice || 0).toFixed(2)),
             valueSalesExcludingST: Number(
               Number(rest.valueSalesExcludingST || 0).toFixed(2)
@@ -3619,7 +3733,7 @@ export default function CreateInvoice() {
                     value={
                       item.quantity === "0.00"
                         ? ""
-                        : formatWithCommasWhileTyping(item.quantity)
+                        : formatQuantityWithCommas(item.quantity)
                     } // Show empty instead of 0.00
                     onChange={(e) => {
                       const newValue = handleFloatingNumberInput(
@@ -3635,13 +3749,12 @@ export default function CreateInvoice() {
                       if (value) {
                         // Remove commas and get the raw numeric value
                         const cleanValue = value.replace(/,/g, "");
-                        const numValue = parseFloat(cleanValue);
-                        if (!isNaN(numValue)) {
-                          // Store the raw numeric value, not the formatted one
+                        // Don't parse to float and back to string - preserve the original decimal places
+                        if (cleanValue && cleanValue !== "") {
                           handleItemChange(
                             index,
                             "quantity",
-                            numValue.toString()
+                            cleanValue
                           );
                         }
                       }
@@ -4135,7 +4248,7 @@ export default function CreateInvoice() {
                           {item.uoM}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
-                          {formatNumberWithCommas(item.quantity)}
+                          {formatQuantityWithCommas(item.quantity)}
                         </TableCell>
                         <TableCell sx={{ fontSize: "0.875rem" }}>
                           {formatNumberWithCommas(item.unitPrice)}

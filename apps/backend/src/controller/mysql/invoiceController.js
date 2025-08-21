@@ -1024,13 +1024,33 @@ export const printInvoice = async (req, res) => {
         qrData,
         fbrLogoBase64,
         companyLogoBase64,
+        showFbrLogo: invoiceWithItems.status === "posted", // Only show FBR logo for posted invoices
+        showQRCode: invoiceWithItems.status === "posted", // Only show QR code for posted invoices
         convertToWords: (amount) => {
-          const words = toWords(Math.floor(amount || 0));
-          // Remove commas from the output and capitalize first letter
-          return (
-            words.replace(/,/g, "").charAt(0).toUpperCase() +
-            words.replace(/,/g, "").slice(1)
-          );
+          if (!amount || isNaN(amount)) return "Zero Rupees Only";
+          
+          const rupees = Math.floor(amount);
+          const paisa = Math.round((amount - rupees) * 100);
+          
+          let result = "";
+          
+          if (rupees > 0) {
+            const rupeesWords = toWords(rupees);
+            result = rupeesWords.replace(/,/g, "").charAt(0).toUpperCase() + 
+                     rupeesWords.replace(/,/g, "").slice(1) + " Rupees";
+          }
+          
+          if (paisa > 0) {
+            if (result) result += " and ";
+            const paisaWords = toWords(paisa);
+            result += paisaWords.replace(/,/g, "").charAt(0).toLowerCase() + 
+                      paisaWords.replace(/,/g, "").slice(1) + " Paisa";
+          }
+          
+          if (!result) result = "Zero Rupees";
+          result += " Only";
+          
+          return result;
         },
       }
     );

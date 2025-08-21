@@ -45,7 +45,7 @@ const InvoiceUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
   const [checkingExisting, setCheckingExisting] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Expected columns for invoice data (including items)
+  // Expected columns for invoice data (including items) - aligned with createInvoiceForm.jsx field names
   const expectedColumns = [
     "invoiceType",
     "invoiceDate",
@@ -61,24 +61,24 @@ const InvoiceUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
     "invoiceRefNo",
     "companyInvoiceRefNo",
     "transctypeId",
-    "item_hsCode",
-    "item_productDescription",
-    "item_rate",
-    "item_uoM",
-    "item_quantity",
-    "item_unitPrice",
-    "item_totalValues",
-    "item_valueSalesExcludingST",
-    "item_fixedNotifiedValueOrRetailPrice",
-    "item_salesTaxApplicable",
-    "item_salesTaxWithheldAtSource",
-    "item_extraTax",
-    "item_furtherTax",
-    "item_sroScheduleNo",
-    "item_fedPayable",
-    "item_discount",
-    "item_saleType",
-    "item_sroItemSerialNo",
+    "hsCode",
+    "productDescription",
+    "rate",
+    "uoM",
+    "quantity",
+    "unitPrice",
+    "retailPrice",
+    "totalValues",
+    "valueSalesExcludingST",
+    "salesTaxApplicable",
+    "salesTaxWithheldAtSource",
+    "extraTax",
+    "furtherTax",
+    "sroScheduleNo",
+    "fedPayable",
+    "discount",
+    "saleType",
+    "sroItemSerialNo",
   ];
 
   const downloadTemplate = () => {
@@ -340,24 +340,24 @@ const InvoiceUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
 
       // Validate item fields if present
       const itemFields = [
-        "item_hsCode",
-        "item_productDescription",
-        "item_rate",
-        "item_uoM",
-        "item_quantity",
-        "item_unitPrice",
-        "item_totalValues",
-        "item_valueSalesExcludingST",
-        "item_fixedNotifiedValueOrRetailPrice",
-        "item_salesTaxApplicable",
-        "item_salesTaxWithheldAtSource",
-        "item_extraTax",
-        "item_furtherTax",
-        "item_sroScheduleNo",
-        "item_fedPayable",
-        "item_discount",
-        "item_saleType",
-        "item_sroItemSerialNo",
+        "hsCode",
+        "productDescription",
+        "rate",
+        "uoM",
+        "quantity",
+        "unitPrice",
+        "totalValues",
+        "valueSalesExcludingST",
+        "retailPrice",
+        "salesTaxApplicable",
+        "salesTaxWithheldAtSource",
+        "extraTax",
+        "furtherTax",
+        "sroScheduleNo",
+        "fedPayable",
+        "discount",
+        "saleType",
+        "sroItemSerialNo",
       ];
 
       // Check if any item field is present
@@ -369,35 +369,35 @@ const InvoiceUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
       if (hasItemData) {
         // Validate required item fields
         if (
-          !row.item_productDescription ||
-          !row.item_productDescription.trim()
+          !row.productDescription ||
+          !row.productDescription.trim()
         ) {
           rowErrors.push(
             "Product description is required when item data is provided"
           );
         }
 
-        if (!row.item_quantity || !row.item_quantity.trim()) {
+        if (!row.quantity || !row.quantity.trim()) {
           rowErrors.push("Quantity is required when item data is provided");
         }
 
-        if (!row.item_unitPrice || !row.item_unitPrice.trim()) {
+        if (!row.unitPrice || !row.unitPrice.trim()) {
           rowErrors.push("Unit price is required when item data is provided");
         }
 
         // Validate numeric fields
         const numericFields = [
-          "item_quantity",
-          "item_unitPrice",
-          "item_totalValues",
-          "item_valueSalesExcludingST",
-          "item_fixedNotifiedValueOrRetailPrice",
-          "item_salesTaxApplicable",
-          "item_salesTaxWithheldAtSource",
-          "item_extraTax",
-          "item_furtherTax",
-          "item_fedPayable",
-          "item_discount",
+          "quantity",
+          "unitPrice",
+          "totalValues",
+          "valueSalesExcludingST",
+          "retailPrice",
+          "salesTaxApplicable",
+          "salesTaxWithheldAtSource",
+          "extraTax",
+          "furtherTax",
+          "fedPayable",
+          "discount",
         ];
 
         numericFields.forEach((field) => {
@@ -405,7 +405,7 @@ const InvoiceUploader = ({ onUpload, onClose, isOpen, selectedTenant }) => {
             const numValue = parseFloat(row[field]);
             if (isNaN(numValue)) {
               rowErrors.push(
-                `${field.replace("item_", "")} must be a valid number`
+                `${field} must be a valid number`
               );
             }
           }

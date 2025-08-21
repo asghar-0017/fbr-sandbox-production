@@ -280,17 +280,21 @@
       </p>
       <p>Sales Tax Withheld: <%= formatNumber(withheld) %>
       </p>
-      <p><strong>Grand Total (Incl. All Taxes): RS. <%= formatNumber(grandTotal) %></strong></p>
+              <p><strong>Grand Total (Incl. All Taxes): Rs. <%= formatNumber(grandTotal) %></strong></p>
     </div>
 
    <div class="total-in-words" style="position: relative; bottom: 140px;">
-  <p>Total in words:<br/> <%= convertToWords(grandTotal) %> Rupees Only</p>
+  <p>Total in words:<br/> <%= convertToWords(grandTotal) %></p>
 </div>
 
 
     <div class="qr-box" style="position: relative; bottom: 7.5rem;">
-      <img src="data:image/png;base64,<%= companyLogoBase64 %>" alt="FBR Logo" class="fbr-logo" />
-      <img src="<%= qrData %>" alt="QR Code" class="qr-image" />
+      <% if (showFbrLogo) { %>
+        <img src="data:image/png;base64,<%= companyLogoBase64 %>" alt="FBR Logo" class="fbr-logo" />
+      <% } %>
+      <% if (showQRCode) { %>
+        <img src="<%= qrData %>" alt="QR Code" class="qr-image" />
+      <% } %>
     </div>
 
     <div class="clear"></div>
